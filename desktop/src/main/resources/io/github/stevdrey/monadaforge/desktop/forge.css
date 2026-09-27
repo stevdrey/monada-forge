@@ -1,0 +1,16 @@
+.root {
+    -fx-font-family: "System";
+    -fx-font-size: 15px;
+    -fx-background-color: #f4f6fa;
+}
+.label { -fx-text-fill: #233047; }
+.title {
+    -fx-font-size: 32px;
+    -fx-font-weight: bold;
+}
+.status {
+    -fx-background-color: #e0efe9;
+    -fx-text-fill: #15543c;
+    -fx-padding: 10px 16px;
+    -fx-background-radius: 8px;
+}
