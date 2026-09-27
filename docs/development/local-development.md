@@ -22,6 +22,10 @@ Use `gradlew.bat` on Windows. Import the repository root as a Gradle project in 
 
 `desktop/build/install/desktop/bin/desktop` launches the local distribution on Unix. On Windows use the corresponding `.bat` script. The distribution includes dependencies, not a JDK, and targets the platform on which it was built.
 
+## Styling convention
+
+Keep visual presentation in JavaFX CSS stylesheets under `desktop/src/main/resources`. Apply styles through CSS class or ID selectors and `getStyleClass()` / `setId()` in Java. Avoid `Node.setStyle(...)` and JavaFX style-property setters for static colors, typography, spacing, borders or similar presentation. Code-driven styling is appropriate for a genuinely runtime-dependent value or a JavaFX property that CSS cannot express; keep that logic small and document why a stylesheet cannot handle it.
+
 ## Verification
 
 `build` compiles both JPMS modules, processes resources and assembles the application distributions. There are no automated test cases in the initial scaffold; `test` tasks may report `NO-SOURCE`. Add behavior-focused tests with the first use case.

@@ -16,7 +16,7 @@ Keep an explicit list of unresolved feedback items. Do not silently drop feedbac
 | Scope | Guidance |
 | --- | --- |
 | Core | Plain Java; domain and application behavior; no JavaFX, UI state or provider implementation |
-| Desktop | JavaFX scene graph and composition; keep blocking work off the JavaFX application thread |
+| Desktop | JavaFX scene graph and composition; keep blocking work off the JavaFX application thread; define presentation with CSS stylesheets wherever JavaFX CSS supports the intended styling. Avoid inline styles and styling properties in application code unless a genuinely dynamic or unsupported style requires it. |
 | Integrations (future) | Narrow contracts only when needed; credentials and execution policies outside domain objects |
 | Build | Wrapper, catalog and toolchain alignment; update CI and development instructions together |
 | Documentation | Use normal relative Markdown links; no dependency on a published GitHub Wiki |
