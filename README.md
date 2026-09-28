@@ -48,4 +48,6 @@ Contributors and agents should read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGEN
 
 ## Licensing
 
-No project license has been selected. A licensing decision is required before public distribution; Dokene's license is not inherited by this repository.
+Monada Forge is licensed under the [Apache License 2.0](LICENSE).
+
+The license permits use, modification and distribution, including commercial use, subject to its terms. Trademark rights are not granted by the Apache License 2.0.
