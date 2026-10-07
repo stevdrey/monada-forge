@@ -2,6 +2,7 @@ package io.github.stevdrey.monadaforge.core.workspace;
 
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
+import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -38,6 +39,11 @@ public final class WorkspaceRoot {
             return reject(candidate, WorkspaceRootValidation.Reason.NOT_FOUND);
         } catch (AccessDeniedException e) {
             return reject(candidate, WorkspaceRootValidation.Reason.NOT_READABLE);
+        } catch (FileSystemException e) {
+            if (hasNonDirectoryAncestor(candidate)) {
+                return reject(candidate, WorkspaceRootValidation.Reason.NOT_A_DIRECTORY);
+            }
+            throw e;
         }
         if (!Files.isDirectory(real)) {
             return reject(candidate, WorkspaceRootValidation.Reason.NOT_A_DIRECTORY);
@@ -46,6 +52,16 @@ public final class WorkspaceRoot {
             return reject(candidate, WorkspaceRootValidation.Reason.NOT_READABLE);
         }
         return new WorkspaceRootValidation.Accepted(new WorkspaceRoot(real));
+    }
+
+    /** True when the nearest existing ancestor of {@code candidate} is not a directory (e.g. {@code file/child}). */
+    private static boolean hasNonDirectoryAncestor(Path candidate) {
+        for (Path p = candidate.toAbsolutePath().normalize().getParent(); p != null; p = p.getParent()) {
+            if (Files.exists(p)) {
+                return !Files.isDirectory(p);
+            }
+        }
+        return false;
     }
 
     private static WorkspaceRootValidation reject(Path candidate, WorkspaceRootValidation.Reason reason) {

@@ -89,6 +89,13 @@ class WorkspaceRootTest {
     }
 
     @Test
+    void rejectsPathBelowRegularFile() throws IOException {
+        Path file = Files.createFile(temp.resolve("file.txt"));
+
+        assertRejected(file.resolve("child"), Reason.NOT_A_DIRECTORY);
+    }
+
+    @Test
     void rejectsUnreadableDirectory() throws IOException {
         Path dir = Files.createDirectory(temp.resolve("locked"));
         boolean posix = temp.getFileSystem().supportedFileAttributeViews().contains("posix");
