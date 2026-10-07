@@ -10,7 +10,8 @@ public sealed interface WorkspaceRootValidation {
     enum Reason {
         NOT_FOUND,
         NOT_A_DIRECTORY,
-        NOT_READABLE
+        NOT_READABLE,
+        SYMLINK_LOOP
     }
 
     /** The candidate is a valid workspace root. */

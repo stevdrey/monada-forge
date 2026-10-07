@@ -40,8 +40,9 @@ public final class WorkspaceRoot {
         } catch (AccessDeniedException e) {
             return reject(candidate, WorkspaceRootValidation.Reason.NOT_READABLE);
         } catch (FileSystemException e) {
-            if (hasNonDirectoryAncestor(candidate)) {
-                return reject(candidate, WorkspaceRootValidation.Reason.NOT_A_DIRECTORY);
+            WorkspaceRootValidation.Reason reason = classifyUnresolvable(candidate);
+            if (reason != null) {
+                return reject(candidate, reason);
             }
             throw e;
         }
@@ -54,14 +55,25 @@ public final class WorkspaceRoot {
         return new WorkspaceRootValidation.Accepted(new WorkspaceRoot(real));
     }
 
-    /** True when the nearest existing ancestor of {@code candidate} is not a directory (e.g. {@code file/child}). */
-    private static boolean hasNonDirectoryAncestor(Path candidate) {
-        for (Path p = candidate.toAbsolutePath().normalize().getParent(); p != null; p = p.getParent()) {
-            if (Files.exists(p)) {
-                return !Files.isDirectory(p);
+    /**
+     * Walks the un-normalized path prefix by prefix (so {@code ..} is resolved by the filesystem, not
+     * lexically) to classify a resolution failure as invalid input; {@code null} if it is not.
+     */
+    private static WorkspaceRootValidation.Reason classifyUnresolvable(Path candidate) {
+        Path absolute = candidate.toAbsolutePath();
+        Path prefix = absolute.getRoot();
+        int count = absolute.getNameCount();
+        for (int i = 0; i < count; i++) {
+            prefix = prefix.resolve(absolute.getName(i));
+            if (Files.exists(prefix)) {
+                if (i < count - 1 && !Files.isDirectory(prefix)) {
+                    return WorkspaceRootValidation.Reason.NOT_A_DIRECTORY;
+                }
+            } else if (Files.isSymbolicLink(prefix)) {
+                return WorkspaceRootValidation.Reason.SYMLINK_LOOP;
             }
         }
-        return false;
+        return null;
     }
 
     private static WorkspaceRootValidation reject(Path candidate, WorkspaceRootValidation.Reason reason) {

@@ -96,6 +96,27 @@ class WorkspaceRootTest {
     }
 
     @Test
+    void rejectsDotDotAfterRegularFile() throws IOException {
+        Path file = Files.createFile(temp.resolve("file.txt"));
+
+        assertRejected(file.resolve("..").resolve("x"), Reason.NOT_A_DIRECTORY);
+    }
+
+    @Test
+    void rejectsSymlinkLoop() throws IOException {
+        Path a = temp.resolve("a");
+        Path b = temp.resolve("b");
+        try {
+            Files.createSymbolicLink(a, b);
+            Files.createSymbolicLink(b, a);
+        } catch (UnsupportedOperationException | IOException e) {
+            assumeTrue(false, "symbolic links not supported here");
+        }
+
+        assertRejected(a, Reason.SYMLINK_LOOP);
+    }
+
+    @Test
     void rejectsUnreadableDirectory() throws IOException {
         Path dir = Files.createDirectory(temp.resolve("locked"));
         boolean posix = temp.getFileSystem().supportedFileAttributeViews().contains("posix");
