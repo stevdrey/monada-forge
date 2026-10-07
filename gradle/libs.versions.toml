@@ -2,6 +2,12 @@
 java = "27"
 javafx = "27"
 javafxPlugin = "0.1.0"
+junit = "6.0.3"
+
+[libraries]
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 
 [plugins]
 javafx = { id = "org.openjfx.javafxplugin", version.ref = "javafxPlugin" }
