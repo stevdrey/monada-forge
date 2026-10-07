@@ -23,7 +23,7 @@ Keep an explicit list of unresolved feedback items. Do not silently drop feedbac
 
 ## Verification and completion
 
-Add behavior-focused tests with the feature they protect. Reuse existing tests before introducing duplicate coverage. This scaffold has no domain behavior and no automated test cases yet; compilation is not a substitute for testing future behavior.
+Add behavior-focused tests with the feature they protect. Reuse existing tests before introducing duplicate coverage. `core` tests run with JUnit (`./gradlew :core:test`); modules without tests report `NO-SOURCE`. Compilation is not a substitute for testing future behavior.
 
 Stop when acceptance criteria are met, required evidence is available, and no correctness, security or data-integrity blocker remains. Label stylistic and speculative observations as optional.
 

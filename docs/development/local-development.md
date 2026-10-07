@@ -28,7 +28,7 @@ Keep visual presentation in JavaFX CSS stylesheets under `desktop/src/main/resou
 
 ## Verification
 
-`build` compiles both JPMS modules, processes resources and assembles the application distributions. There are no automated test cases in the initial scaffold; `test` tasks may report `NO-SOURCE`. Add behavior-focused tests with the first use case.
+`build` compiles both JPMS modules, processes resources and assembles the application distributions. `core` has behavior-focused JUnit tests (`./gradlew :core:test`); `desktop` has none yet, so its `test` task may report `NO-SOURCE`. Add behavior-focused tests with each new use case.
 
 For desktop changes, launch the application and check the title, stylesheet, visible content, resizing and clean exit. Use a virtual display such as Xvfb only for headless verification; a successful compilation does not demonstrate GUI startup.
 
