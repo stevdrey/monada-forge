@@ -6,6 +6,7 @@ import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Objects;
 
 /**
@@ -46,7 +47,15 @@ public final class WorkspaceRoot {
             }
             throw e;
         }
-        if (!Files.isDirectory(real)) {
+        BasicFileAttributes attributes;
+        try {
+            attributes = Files.readAttributes(real, BasicFileAttributes.class);
+        } catch (NoSuchFileException e) {
+            return reject(candidate, WorkspaceRootValidation.Reason.NOT_FOUND);
+        } catch (AccessDeniedException e) {
+            return reject(candidate, WorkspaceRootValidation.Reason.NOT_READABLE);
+        }
+        if (!attributes.isDirectory()) {
             return reject(candidate, WorkspaceRootValidation.Reason.NOT_A_DIRECTORY);
         }
         if (!Files.isReadable(real)) {
