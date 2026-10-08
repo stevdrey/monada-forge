@@ -163,14 +163,24 @@ class TaskSpecificationTest {
 
     @Test
     void validatesItemsEvenWhenListIsTooLong() {
-        List<String> criteria = new ArrayList<>(java.util.Collections.nCopies(TaskSpecification.MAX_ITEMS, "a"));
-        criteria.add(" ");
+        List<String> criteria = new ArrayList<>(java.util.Collections.nCopies(TaskSpecification.MAX_ITEMS + 1, "a"));
+        criteria.set(2, " ");
 
         assertEquals(
                 List.of(
                         new Violation(Field.ACCEPTANCE_CRITERIA, -1, Reason.TOO_MANY),
-                        new Violation(Field.ACCEPTANCE_CRITERIA, TaskSpecification.MAX_ITEMS, Reason.BLANK)),
+                        new Violation(Field.ACCEPTANCE_CRITERIA, 2, Reason.BLANK)),
                 violations(draft("T", "D", criteria)));
+    }
+
+    @Test
+    void boundsWorkForHugeLists() {
+        List<String> huge = java.util.Collections.nCopies(Integer.MAX_VALUE, " ");
+
+        List<Violation> found = violations(draft("T", "D", huge));
+
+        assertEquals(TaskSpecification.MAX_ITEMS + 1, found.size());
+        assertEquals(new Violation(Field.ACCEPTANCE_CRITERIA, -1, Reason.TOO_MANY), found.get(0));
     }
 
     @Test

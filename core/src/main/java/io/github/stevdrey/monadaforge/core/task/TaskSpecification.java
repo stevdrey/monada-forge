@@ -45,7 +45,9 @@ public final class TaskSpecification {
 
     /**
      * Normalizes and validates {@code draft}. Text is stripped and line endings become {@code \n};
-     * list order is preserved. Every violation is reported, in field order.
+     * list order is preserved. Every violation is reported, in field order. For a list over
+     * {@link #MAX_ITEMS}, only the first {@link #MAX_ITEMS} items are inspected, so the work stays
+     * bounded regardless of the input size.
      */
     public static TaskSpecificationValidation validate(TaskSpecificationDraft draft) {
         Objects.requireNonNull(draft, "draft");
@@ -85,8 +87,10 @@ public final class TaskSpecification {
         if (raw.size() > MAX_ITEMS) {
             violations.add(new Violation(field, Violation.NO_INDEX, Reason.TOO_MANY));
         }
-        List<String> items = new ArrayList<>(raw.size());
-        for (int i = 0; i < raw.size(); i++) {
+        // Input is untrusted: size work and allocation by the limit, never by the supplied list.
+        int inspected = Math.min(raw.size(), MAX_ITEMS);
+        List<String> items = new ArrayList<>(inspected);
+        for (int i = 0; i < inspected; i++) {
             String item = raw.get(i);
             if (item == null) {
                 violations.add(new Violation(field, i, Reason.MISSING));
