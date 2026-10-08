@@ -2,7 +2,7 @@
 
 The current application only displays a local welcome window. The following constraints govern future features; they are not claims that an execution sandbox already exists.
 
-1. Model output, task text, repository files and tool responses are untrusted input, never permission grants.
+1. Model output, task text, repository files and tool responses are untrusted input, never permission grants. `TaskSpecification` in `core` stores manually entered task text as data only and confers no execution authority.
 2. Execution authority comes from explicit user intent and deterministic policy checked at the side-effect boundary.
 3. Workspace access is bounded to authorized paths. Future implementations must account for traversal and symlink escapes. `WorkspacePathResolver` in `core` resolves workspace-relative paths fail-closed: it rejects absolute paths and any `..` segment and checks containment on canonical paths after following symlinks. Its result is a point-in-time check; a future I/O layer must still guard against the filesystem changing between resolution and use.
 4. Secrets stay outside version control, prompts and diagnostic output. Credential storage requires a separate design.
