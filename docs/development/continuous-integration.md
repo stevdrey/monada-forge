@@ -5,10 +5,10 @@ Monada Forge runs independent GitHub Actions workflows on pull requests and push
 | Workflow | Required verification | Scope |
 | --- | --- | --- |
 | Build | `./gradlew --no-daemon build :desktop:installDist` | Java 27 compilation, JUnit tests, Gradle checks, and desktop distribution |
-| CodeQL | Java/Kotlin security-extended queries | Java source and Gradle Kotlin build logic |
+| CodeQL | Java security-extended queries (buildless extraction) | Java source only; Kotlin DSL is excluded |
 | Security Scans | Gitleaks and Trivy | Committed secrets, dependency vulnerabilities, and configuration |
 
-Security analysis also runs weekly and can be started manually. CI never launches a graphical JavaFX session, so successful builds do not certify visual behavior.
+CodeQL uses `build-mode: none` because compiler-traced extraction did not capture Java 27 builds. GitHub's currently published CodeQL support matrix only lists Java through version 26; confirm Java 27 extraction in Actions before treating it as fully supported. Buildless mode does not scan Kotlin build scripts.\n\nSecurity analysis also runs weekly and can be started manually. CI never launches a graphical JavaFX session, so successful builds do not certify visual behavior.
 
 ## Pull request expectations
 
