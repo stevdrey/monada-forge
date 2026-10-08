@@ -101,24 +101,74 @@ public final class TaskSpecification {
         return List.copyOf(items);
     }
 
+    /**
+     * Inspects {@code raw} in one pass without copying it, so an oversized untrusted string is
+     * rejected before any normalized copy is allocated. The normalized form (edge whitespace
+     * stripped, {@code \r\n} and {@code \r} as {@code \n}) is built only for accepted values.
+     */
     private static String text(
             String raw, Field field, int index, int maxLength, boolean multiline, List<Violation> violations) {
-        String value = raw.strip().replace("\r\n", "\n").replace('\r', '\n');
-        if (value.isEmpty()) {
-            violations.add(new Violation(field, index, Reason.BLANK));
-            return value;
+        int start = 0;
+        int end = raw.length();
+        while (start < end && isBlank(raw.codePointAt(start))) {
+            start += Character.charCount(raw.codePointAt(start));
         }
-        if (value.length() > maxLength) {
+        while (end > start && isBlank(raw.codePointBefore(end))) {
+            end -= Character.charCount(raw.codePointBefore(end));
+        }
+        if (start == end) {
+            violations.add(new Violation(field, index, Reason.BLANK));
+            return "";
+        }
+
+        int length = 0;
+        boolean disallowed = false;
+        for (int i = start; i < end; i++) {
+            char c = raw.charAt(i);
+            if (c == '\r' && i + 1 < end && raw.charAt(i + 1) == '\n') {
+                continue; // the CRLF pair counts once, at its LF
+            }
+            length++;
+            disallowed |= isDisallowed(c, multiline);
+        }
+        if (length > maxLength) {
             violations.add(new Violation(field, index, Reason.TOO_LONG));
         }
-        if (hasDisallowedControl(value, multiline)) {
+        if (disallowed) {
             violations.add(new Violation(field, index, Reason.CONTAINS_CONTROL_CHARACTERS));
         }
-        return value;
+        if (length > maxLength || disallowed) {
+            return "";
+        }
+
+        StringBuilder normalized = new StringBuilder(length);
+        for (int i = start; i < end; i++) {
+            char c = raw.charAt(i);
+            if (c == '\r') {
+                if (i + 1 < end && raw.charAt(i + 1) == '\n') {
+                    continue;
+                }
+                c = '\n';
+            }
+            normalized.append(c);
+        }
+        return normalized.toString();
     }
 
-    private static boolean hasDisallowedControl(String value, boolean multiline) {
-        return value.chars().anyMatch(c -> Character.isISOControl(c) && !(c == '\t' || (multiline && c == '\n')));
+    /** Whitespace per Java plus Unicode space separators such as U+00A0, U+2007 and U+202F. */
+    private static boolean isBlank(int codePoint) {
+        return Character.isWhitespace(codePoint) || Character.isSpaceChar(codePoint);
+    }
+
+    /**
+     * Control characters other than tab are disallowed; line breaks (LF, CR, U+2028, U+2029) are
+     * allowed only in multiline fields.
+     */
+    private static boolean isDisallowed(char c, boolean multiline) {
+        if (c == '\n' || c == '\r' || c == '\u2028' || c == '\u2029') {
+            return !multiline;
+        }
+        return Character.isISOControl(c) && c != '\t';
     }
 
     public String title() {

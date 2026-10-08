@@ -25,7 +25,7 @@ public sealed interface TaskSpecificationValidation {
         TOO_LONG,
         /** The list exceeds the maximum number of items. */
         TOO_MANY,
-        /** The value contains a disallowed control character. */
+        /** The value contains a disallowed control or line-separator character. */
         CONTAINS_CONTROL_CHARACTERS
     }
 

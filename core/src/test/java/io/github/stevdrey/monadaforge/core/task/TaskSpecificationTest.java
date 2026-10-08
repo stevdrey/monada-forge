@@ -198,6 +198,38 @@ class TaskSpecificationTest {
     }
 
     @Test
+    void treatsUnicodeSpacesAsBlankAndStripsThemAtEdges() {
+        String spaces = "   ";
+
+        assertSingle(draft(spaces, "D", List.of("A")), Field.TITLE, -1, Reason.BLANK);
+        assertSingle(draft("T", "D", List.of("ok", spaces)), Field.ACCEPTANCE_CRITERIA, 1, Reason.BLANK);
+        assertEquals("T", accepted(draft(" T ", "D", List.of("A"))).title());
+    }
+
+    @Test
+    void rejectsUnicodeLineSeparatorsInTitleButAllowsThemInMultilineFields() {
+        assertSingle(draft("a b", "D", List.of("A")), Field.TITLE, -1, Reason.CONTAINS_CONTROL_CHARACTERS);
+        assertSingle(draft("a b", "D", List.of("A")), Field.TITLE, -1, Reason.CONTAINS_CONTROL_CHARACTERS);
+
+        TaskSpecification spec = accepted(draft("T", "a b", List.of("c d")));
+        assertEquals("a b", spec.description());
+    }
+
+    @Test
+    void judgesLengthAfterNormalizationAndBoundsOversizedInput() {
+        int pairs = TaskSpecification.MAX_ITEM_LENGTH;
+        String crlf = "\r\n".repeat(pairs - 2);
+        String atLimit = "a" + crlf + "a"; // raw length exceeds the limit, normalized length equals it
+
+        assertEquals(TaskSpecification.MAX_ITEM_LENGTH, accepted(draft("T", "D", List.of(atLimit)))
+                .acceptanceCriteria().get(0).length());
+        assertSingle(draft("T", "D", List.of(atLimit + "a")), Field.ACCEPTANCE_CRITERIA, 0, Reason.TOO_LONG);
+
+        String huge = "\r\n".repeat(5_000_000);
+        assertSingle(draft("T", "x" + huge + "x", List.of("A")), Field.DESCRIPTION, -1, Reason.TOO_LONG);
+    }
+
+    @Test
     void toStringNeverExposesTaskText() {
         String secret = "sk-secret\r\nFORGED\u001b[31m";
         TaskSpecificationDraft draft =
