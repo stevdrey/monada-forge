@@ -8,7 +8,10 @@ public sealed interface WorkspacePathResolution {
 
     /** Why a candidate path cannot be resolved inside the workspace. */
     enum Reason {
-        /** The candidate is empty or not a syntactically valid path on the root's filesystem. */
+        /**
+         * The candidate is empty, not a syntactically valid path on the root's filesystem, or too long
+         * for it.
+         */
         INVALID_PATH,
         /** The candidate is absolute or carries a root component. */
         ABSOLUTE,

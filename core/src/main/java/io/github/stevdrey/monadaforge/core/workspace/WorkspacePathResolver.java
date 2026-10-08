@@ -2,6 +2,7 @@ package io.github.stevdrey.monadaforge.core.workspace;
 
 import io.github.stevdrey.monadaforge.core.workspace.WorkspacePathResolution.Reason;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
@@ -20,6 +21,9 @@ import java.util.Objects;
  * symbolic link. Only metadata is accessed; nothing is read, created or modified.
  */
 public final class WorkspacePathResolver {
+
+    /** Common NAME_MAX; used only to explain a failure, never to pre-reject. */
+    private static final int MAX_NAME_BYTES = 255;
 
     private WorkspacePathResolver() {}
 
@@ -94,15 +98,28 @@ public final class WorkspacePathResolver {
     }
 
     /**
-     * Rejects resolution failures caused by the input (non-directory component, symlink loop) and
-     * rethrows any other filesystem failure so callers can tell it apart from invalid input.
+     * Rejects resolution failures caused by the input (non-directory component, symlink loop, overlong
+     * name) and rethrows any other filesystem failure so callers can tell it apart from
+     * invalid input.
      */
     private static WorkspacePathResolution rejectUnresolvable(String candidate, Path path, FileSystemException e)
             throws FileSystemException {
-        if (WorkspaceRoot.classifyUnresolvable(path) == null) {
-            throw e;
+        if (WorkspaceRoot.classifyUnresolvable(path) != null) {
+            return reject(candidate, Reason.UNRESOLVABLE);
         }
-        return reject(candidate, Reason.UNRESOLVABLE);
+        if (hasOverlongName(path)) {
+            return reject(candidate, Reason.INVALID_PATH);
+        }
+        throw e;
+    }
+
+    private static boolean hasOverlongName(Path path) {
+        for (Path name : path) {
+            if (name.toString().getBytes(StandardCharsets.UTF_8).length > MAX_NAME_BYTES) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static WorkspacePathResolution contained(

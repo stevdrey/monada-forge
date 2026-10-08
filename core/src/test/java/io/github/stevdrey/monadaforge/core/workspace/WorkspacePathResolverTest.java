@@ -190,6 +190,12 @@ class WorkspacePathResolverTest {
     }
 
     @Test
+    void rejectsOverlongNameAsInvalid() throws IOException {
+        assertRejected("x".repeat(300), Reason.INVALID_PATH);
+        assertRejected("x".repeat(300) + "/new.txt", Reason.INVALID_PATH);
+    }
+
+    @Test
     void rejectsInaccessibleDirectory() throws IOException {
         Path dir = Files.createDirectory(ws.resolve("locked"));
         boolean posix = temp.getFileSystem().supportedFileAttributeViews().contains("posix");
