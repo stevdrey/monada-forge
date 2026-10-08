@@ -84,7 +84,6 @@ public final class TaskSpecification {
         }
         if (raw.size() > MAX_ITEMS) {
             violations.add(new Violation(field, Violation.NO_INDEX, Reason.TOO_MANY));
-            return List.of();
         }
         List<String> items = new ArrayList<>(raw.size());
         for (int i = 0; i < raw.size(); i++) {

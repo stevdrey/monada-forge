@@ -162,6 +162,18 @@ class TaskSpecificationTest {
     }
 
     @Test
+    void validatesItemsEvenWhenListIsTooLong() {
+        List<String> criteria = new ArrayList<>(java.util.Collections.nCopies(TaskSpecification.MAX_ITEMS, "a"));
+        criteria.add(" ");
+
+        assertEquals(
+                List.of(
+                        new Violation(Field.ACCEPTANCE_CRITERIA, -1, Reason.TOO_MANY),
+                        new Violation(Field.ACCEPTANCE_CRITERIA, TaskSpecification.MAX_ITEMS, Reason.BLANK)),
+                violations(draft("T", "D", criteria)));
+    }
+
+    @Test
     void rejectsControlCharactersAndRestrictsNewlineToMultilineFields() {
         assertSingle(draft("T\u0000", "D", List.of("A")), Field.TITLE, -1, Reason.CONTAINS_CONTROL_CHARACTERS);
         assertSingle(draft("a\nb", "D", List.of("A")), Field.TITLE, -1, Reason.CONTAINS_CONTROL_CHARACTERS);
