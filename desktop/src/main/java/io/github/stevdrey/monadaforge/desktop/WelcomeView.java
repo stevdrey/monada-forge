@@ -8,7 +8,7 @@ public final class WelcomeView extends VBox {
     public WelcomeView() {
         getStyleClass().add("view");
 
-        var heading = new Label("Welcome to Monada Forge");
+        var heading = new Label("Welcome");
         heading.getStyleClass().add("view-title");
 
         var body = new Label("Task intake, agent connections and workflow execution "

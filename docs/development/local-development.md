@@ -28,11 +28,11 @@ Keep visual presentation in JavaFX CSS stylesheets under `desktop/src/main/resou
 
 ### Application shell style classes
 
-`ApplicationShell` hosts a header (`app-header`, `app-title`, `app-subtitle`), a scrollable content region (`app-content-scroll`, `app-content`) and a status region (`app-status-bar`). `StatusBar.show(StatusKind, String)` switches between `status-info`, `status-success`, `status-warning` and `status-error`. Screens hosted by the shell use `view`, `view-title` and `view-body`, and forms use `form-field`, `form-label`, `form-hint`, `form-error`, `invalid` (on text inputs) and `button primary`. Colors are look-up colors (`-forge-*`) declared on `.root` in `forge.css`.
+`ApplicationShell` hosts a header (`app-header`, `app-title`, `app-subtitle`), a scrollable content region (`app-content-scroll`, `app-content`) and a status region (`app-status-bar`). `StatusBar.show(StatusKind, String)` switches between `status-info`, `status-success`, `status-warning` and `status-error`. Screens hosted by the shell use `view`, `view-title` and `view-body`. Colors are look-up colors (`-forge-*`) declared on `.root` in `forge.css`.
 
 ## Verification
 
-`build` compiles both JPMS modules, processes resources and assembles the application distributions. `core` has behavior-focused JUnit tests (`./gradlew :core:test`); `desktop` has none yet, so its `test` task may report `NO-SOURCE`. Add behavior-focused tests with each new use case.
+`build` compiles both JPMS modules, processes resources and assembles the application distributions. `core` has behavior-focused JUnit tests (`./gradlew :core:test`); `desktop` tests cover toolkit-independent presentation logic such as `StatusBar` (`./gradlew :desktop:test`). Add behavior-focused tests with each new use case.
 
 For desktop changes, launch the application and check the title, stylesheet, visible content, resizing and clean exit. Use a virtual display such as Xvfb only for headless verification; a successful compilation does not demonstrate GUI startup.
 

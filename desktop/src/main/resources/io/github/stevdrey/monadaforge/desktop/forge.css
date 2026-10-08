@@ -5,8 +5,6 @@
     -forge-border: #d5dbe6;
     -forge-text: #233047;
     -forge-text-muted: #5b6980;
-    -forge-accent: #2f5fd0;
-    -forge-accent-text: #ffffff;
     -forge-info-bg: #e3ecfb;
     -forge-info-text: #1d3f8a;
     -forge-success-bg: #e0efe9;
@@ -72,27 +70,3 @@
 .status-warning .status-message { -fx-text-fill: -forge-warning-text; }
 .status-error { -fx-background-color: -forge-error-bg; }
 .status-error .status-message { -fx-text-fill: -forge-error-text; }
-
-/* Reusable form primitives for upcoming screens */
-.form-field { -fx-spacing: 4px; }
-.form-label { -fx-font-weight: bold; }
-.form-hint { -fx-text-fill: -forge-text-muted; -fx-font-size: 13px; }
-.form-error { -fx-text-fill: -forge-error-text; -fx-font-size: 13px; }
-
-.text-input {
-    -fx-background-color: -forge-panel;
-    -fx-border-color: -forge-border;
-    -fx-border-radius: 6px;
-    -fx-background-radius: 6px;
-    -fx-padding: 8px 10px;
-}
-.text-input:focused { -fx-border-color: -forge-accent; }
-.text-input.invalid { -fx-border-color: -forge-error-text; }
-
-.button.primary {
-    -fx-background-color: -forge-accent;
-    -fx-text-fill: -forge-accent-text;
-    -fx-background-radius: 6px;
-    -fx-padding: 8px 18px;
-}
-.button.primary:disabled { -fx-opacity: 0.5; }

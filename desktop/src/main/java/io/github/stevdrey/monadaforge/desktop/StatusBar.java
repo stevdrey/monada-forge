@@ -1,9 +1,9 @@
 package io.github.stevdrey.monadaforge.desktop;
 
-import java.util.Arrays;
 import java.util.Objects;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 
 /** Status and feedback region; presentation of each state is defined by CSS. */
 public final class StatusBar extends HBox {
@@ -13,6 +13,8 @@ public final class StatusBar extends HBox {
         getStyleClass().add("app-status-bar");
         message.getStyleClass().add("status-message");
         message.setWrapText(true);
+        message.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(message, Priority.ALWAYS);
         getChildren().add(message);
     }
 
@@ -20,7 +22,6 @@ public final class StatusBar extends HBox {
     public void show(StatusKind kind, String text) {
         Objects.requireNonNull(kind, "kind");
         message.setText(Objects.requireNonNull(text, "text"));
-        Arrays.stream(StatusKind.values()).forEach(k -> getStyleClass().remove(k.styleClass()));
-        getStyleClass().add(kind.styleClass());
+        kind.applyTo(getStyleClass());
     }
 }
