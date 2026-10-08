@@ -15,4 +15,23 @@ public record TaskSpecificationDraft(
         String description,
         List<String> acceptanceCriteria,
         List<String> constraints,
-        List<String> nonGoals) {}
+        List<String> nonGoals) {
+
+    /** A structural summary only: unvalidated text never reaches logs or diagnostics. */
+    @Override
+    public String toString() {
+        return "TaskSpecificationDraft[title=" + length(title)
+                + ", description=" + length(description)
+                + ", acceptanceCriteria=" + count(acceptanceCriteria)
+                + ", constraints=" + count(constraints)
+                + ", nonGoals=" + count(nonGoals) + "]";
+    }
+
+    private static String length(String text) {
+        return text == null ? "null" : text.length() + " chars";
+    }
+
+    private static String count(List<String> items) {
+        return items == null ? "null" : items.size() + " items";
+    }
+}

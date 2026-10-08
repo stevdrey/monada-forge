@@ -102,9 +102,12 @@ public final class TaskSpecification {
         String value = raw.strip().replace("\r\n", "\n").replace('\r', '\n');
         if (value.isEmpty()) {
             violations.add(new Violation(field, index, Reason.BLANK));
-        } else if (value.length() > maxLength) {
+            return value;
+        }
+        if (value.length() > maxLength) {
             violations.add(new Violation(field, index, Reason.TOO_LONG));
-        } else if (hasDisallowedControl(value, multiline)) {
+        }
+        if (hasDisallowedControl(value, multiline)) {
             violations.add(new Violation(field, index, Reason.CONTAINS_CONTROL_CHARACTERS));
         }
         return value;
@@ -159,7 +162,7 @@ public final class TaskSpecification {
 
     @Override
     public String toString() {
-        return "TaskSpecification[title=" + title + ", acceptanceCriteria=" + acceptanceCriteria.size()
+        return "TaskSpecification[titleLength=" + title.length() + ", acceptanceCriteria=" + acceptanceCriteria.size()
                 + ", constraints=" + constraints.size() + ", nonGoals=" + nonGoals.size()
                 + ", source=" + source + "]";
     }

@@ -174,6 +174,37 @@ class TaskSpecificationTest {
     }
 
     @Test
+    void reportsControlCharactersInOverlongText() {
+        assertEquals(
+                List.of(
+                        new Violation(Field.TITLE, -1, Reason.TOO_LONG),
+                        new Violation(Field.TITLE, -1, Reason.CONTAINS_CONTROL_CHARACTERS)),
+                violations(draft("t".repeat(TaskSpecification.MAX_TITLE_LENGTH) + "\u0000", "D", List.of("A"))));
+        assertEquals(
+                List.of(
+                        new Violation(Field.ACCEPTANCE_CRITERIA, 1, Reason.TOO_LONG),
+                        new Violation(Field.ACCEPTANCE_CRITERIA, 1, Reason.CONTAINS_CONTROL_CHARACTERS)),
+                violations(draft("T", "D", List.of("ok", "a".repeat(TaskSpecification.MAX_ITEM_LENGTH) + "\u001b"))));
+    }
+
+    @Test
+    void toStringNeverExposesTaskText() {
+        String secret = "sk-secret\r\nFORGED\u001b[31m";
+        TaskSpecificationDraft draft =
+                new TaskSpecificationDraft(secret, secret, List.of(secret), List.of(secret), null);
+
+        String draftText = draft.toString();
+        assertEquals(false, draftText.contains("secret") || draftText.contains("FORGED")
+                || draftText.contains("\r") || draftText.contains("\u001b"));
+        assertEquals("TaskSpecificationDraft[title=" + secret.length() + " chars, description="
+                + secret.length() + " chars, acceptanceCriteria=1 items, constraints=1 items, nonGoals=null]",
+                draftText);
+
+        String specText = accepted(draft("sk-secret-title", "D", List.of("A"))).toString();
+        assertEquals(false, specText.contains("secret"));
+    }
+
+    @Test
     void rejectsControlCharactersAndRestrictsNewlineToMultilineFields() {
         assertSingle(draft("T\u0000", "D", List.of("A")), Field.TITLE, -1, Reason.CONTAINS_CONTROL_CHARACTERS);
         assertSingle(draft("a\nb", "D", List.of("A")), Field.TITLE, -1, Reason.CONTAINS_CONTROL_CHARACTERS);
