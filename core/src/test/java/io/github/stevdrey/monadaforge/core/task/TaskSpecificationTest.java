@@ -1,6 +1,7 @@
 package io.github.stevdrey.monadaforge.core.task;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -10,6 +11,7 @@ import io.github.stevdrey.monadaforge.core.task.TaskSpecificationValidation.Reas
 import io.github.stevdrey.monadaforge.core.task.TaskSpecificationValidation.Rejected;
 import io.github.stevdrey.monadaforge.core.task.TaskSpecificationValidation.Violation;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -155,15 +157,15 @@ class TaskSpecificationTest {
 
     @Test
     void enforcesItemCountBoundary() {
-        accepted(draft("T", "D", java.util.Collections.nCopies(TaskSpecification.MAX_ITEMS, "a")));
+        accepted(draft("T", "D", Collections.nCopies(TaskSpecification.MAX_ITEMS, "a")));
         assertSingle(
-                draft("T", "D", java.util.Collections.nCopies(TaskSpecification.MAX_ITEMS + 1, "a")),
+                draft("T", "D", Collections.nCopies(TaskSpecification.MAX_ITEMS + 1, "a")),
                 Field.ACCEPTANCE_CRITERIA, -1, Reason.TOO_MANY);
     }
 
     @Test
     void validatesItemsEvenWhenListIsTooLong() {
-        List<String> criteria = new ArrayList<>(java.util.Collections.nCopies(TaskSpecification.MAX_ITEMS + 1, "a"));
+        List<String> criteria = new ArrayList<>(Collections.nCopies(TaskSpecification.MAX_ITEMS + 1, "a"));
         criteria.set(2, " ");
 
         assertEquals(
@@ -175,7 +177,7 @@ class TaskSpecificationTest {
 
     @Test
     void boundsWorkForHugeLists() {
-        List<String> huge = java.util.Collections.nCopies(Integer.MAX_VALUE, " ");
+        List<String> huge = Collections.nCopies(Integer.MAX_VALUE, " ");
 
         List<Violation> found = violations(draft("T", "D", huge));
 
@@ -207,12 +209,14 @@ class TaskSpecificationTest {
     }
 
     @Test
-    void rejectsUnicodeLineSeparatorsInTitleButAllowsThemInMultilineFields() {
-        assertSingle(draft("a b", "D", List.of("A")), Field.TITLE, -1, Reason.CONTAINS_CONTROL_CHARACTERS);
-        assertSingle(draft("a b", "D", List.of("A")), Field.TITLE, -1, Reason.CONTAINS_CONTROL_CHARACTERS);
+    void rejectsUnicodeLineBreaksInTitleButNormalizesThemInMultilineFields() {
+        assertSingle(draft("a\u2028b", "D", List.of("A")), Field.TITLE, -1, Reason.CONTAINS_CONTROL_CHARACTERS);
+        assertSingle(draft("a\u2029b", "D", List.of("A")), Field.TITLE, -1, Reason.CONTAINS_CONTROL_CHARACTERS);
+        assertSingle(draft("a\u0085b", "D", List.of("A")), Field.TITLE, -1, Reason.CONTAINS_CONTROL_CHARACTERS);
 
-        TaskSpecification spec = accepted(draft("T", "a b", List.of("c d")));
-        assertEquals("a b", spec.description());
+        TaskSpecification spec = accepted(draft("T", "a\u2028b\u0085c", List.of("c\u2029d")));
+        assertEquals("a\nb\nc", spec.description());
+        assertEquals(List.of("c\nd"), spec.acceptanceCriteria());
     }
 
     @Test
@@ -230,20 +234,72 @@ class TaskSpecificationTest {
     }
 
     @Test
+    void treatsZeroWidthSpacesAsBlankAndRejectsBidiControls() {
+        assertSingle(draft("\u200B\u2060\uFEFF", "D", List.of("A")), Field.TITLE, -1, Reason.BLANK);
+        assertEquals("T", accepted(draft("\u200BT\uFEFF", "D", List.of("A"))).title());
+        assertSingle(draft("a\u202Eb", "D", List.of("A")), Field.TITLE, -1, Reason.CONTAINS_CONTROL_CHARACTERS);
+        assertSingle(draft("T", "a\u2066b", List.of("A")), Field.DESCRIPTION, -1, Reason.CONTAINS_CONTROL_CHARACTERS);
+    }
+
+    @Test
+    void rejectsControlCharactersConsistentlyAtEdgesAndInterior() {
+        assertSingle(draft("\u001Fabc", "D", List.of("A")), Field.TITLE, -1, Reason.CONTAINS_CONTROL_CHARACTERS);
+        assertSingle(draft("a\u001Fb", "D", List.of("A")), Field.TITLE, -1, Reason.CONTAINS_CONTROL_CHARACTERS);
+    }
+
+    @Test
+    void countsCodePointsAndRejectsUnpairedSurrogates() {
+        String emoji = "\uD83D\uDE00";
+
+        accepted(draft(emoji.repeat(TaskSpecification.MAX_TITLE_LENGTH), "D", List.of("A")));
+        assertSingle(
+                draft(emoji.repeat(TaskSpecification.MAX_TITLE_LENGTH + 1), "D", List.of("A")),
+                Field.TITLE, -1, Reason.TOO_LONG);
+        assertSingle(draft("a\uD83Db", "D", List.of("A")), Field.TITLE, -1, Reason.CONTAINS_CONTROL_CHARACTERS);
+    }
+
+    @Test
+    void stripsLineBreaksAtEdgesCleanly() {
+        assertEquals("a", accepted(draft("T", "a\r\n", List.of("A"))).description());
+        assertEquals("A", accepted(draft("T", "D", List.of("\r\nA"))).acceptanceCriteria().get(0));
+        assertEquals("a\nb", accepted(draft("T", "\r\na\r\nb\r", List.of("A"))).description());
+    }
+
+    @Test
+    void reportsNullItemsAlongsideTooManyInOversizedList() {
+        List<String> criteria = new ArrayList<>(Collections.nCopies(TaskSpecification.MAX_ITEMS + 5, "a"));
+        criteria.set(1, null);
+
+        assertEquals(
+                List.of(
+                        new Violation(Field.ACCEPTANCE_CRITERIA, -1, Reason.TOO_MANY),
+                        new Violation(Field.ACCEPTANCE_CRITERIA, 1, Reason.MISSING)),
+                violations(draft("T", "D", criteria)));
+    }
+
+    @Test
+    void validationResultsEnforceTheirInvariants() {
+        assertThrows(IllegalArgumentException.class, () -> new Rejected(List.of()));
+        assertThrows(NullPointerException.class, () -> new Rejected(null));
+        assertThrows(IllegalArgumentException.class, () -> new Violation(Field.TITLE, -2, Reason.BLANK));
+    }
+
+    @Test
     void toStringNeverExposesTaskText() {
         String secret = "sk-secret\r\nFORGED\u001b[31m";
         TaskSpecificationDraft draft =
                 new TaskSpecificationDraft(secret, secret, List.of(secret), List.of(secret), null);
 
         String draftText = draft.toString();
-        assertEquals(false, draftText.contains("secret") || draftText.contains("FORGED")
-                || draftText.contains("\r") || draftText.contains("\u001b"));
+        assertFalse(draftText.contains("secret"), draftText);
+        assertFalse(draftText.contains("FORGED"), draftText);
+        assertFalse(draftText.contains("\r") || draftText.contains("\u001b"), draftText);
         assertEquals("TaskSpecificationDraft[title=" + secret.length() + " chars, description="
                 + secret.length() + " chars, acceptanceCriteria=1 items, constraints=1 items, nonGoals=null]",
                 draftText);
 
         String specText = accepted(draft("sk-secret-title", "D", List.of("A"))).toString();
-        assertEquals(false, specText.contains("secret"));
+        assertFalse(specText.contains("secret"), specText);
     }
 
     @Test

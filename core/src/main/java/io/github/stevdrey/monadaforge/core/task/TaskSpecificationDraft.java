@@ -8,7 +8,8 @@ import java.util.List;
  * <p>Any component may be {@code null}. A {@code null} {@code title}, {@code description} or
  * {@code acceptanceCriteria} is reported as a missing value, whereas a {@code null} optional list
  * ({@code constraints}, {@code nonGoals}) is accepted and treated as empty. All text is untrusted
- * data.
+ * data. The lists are read during {@link TaskSpecification#validate} and must not be modified
+ * concurrently while it runs.
  */
 public record TaskSpecificationDraft(
         String title,

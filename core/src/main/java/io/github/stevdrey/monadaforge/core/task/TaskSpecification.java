@@ -16,9 +16,11 @@ import java.util.Objects;
  */
 public final class TaskSpecification {
 
+    /** Maximum lengths are measured in Unicode code points after normalization. */
     public static final int MAX_TITLE_LENGTH = 200;
     public static final int MAX_DESCRIPTION_LENGTH = 20_000;
     public static final int MAX_ITEM_LENGTH = 2_000;
+    /** Maximum number of entries in each list. */
     public static final int MAX_ITEMS = 50;
 
     private final String title;
@@ -78,20 +80,21 @@ public final class TaskSpecification {
 
     private static List<String> list(
             List<String> raw, Field field, boolean required, List<Violation> violations) {
-        if (raw == null || (required && raw.isEmpty())) {
+        // One bounded snapshot of the untrusted list: its size and elements are read exactly once.
+        List<String> snapshot = raw == null ? List.of() : raw.stream().limit(MAX_ITEMS + 1L).toList();
+        if (snapshot.isEmpty()) {
             if (required) {
                 violations.add(new Violation(field, Violation.NO_INDEX, Reason.MISSING));
             }
             return List.of();
         }
-        if (raw.size() > MAX_ITEMS) {
+        if (snapshot.size() > MAX_ITEMS) {
             violations.add(new Violation(field, Violation.NO_INDEX, Reason.TOO_MANY));
         }
-        // Input is untrusted: size work and allocation by the limit, never by the supplied list.
-        int inspected = Math.min(raw.size(), MAX_ITEMS);
+        int inspected = Math.min(snapshot.size(), MAX_ITEMS);
         List<String> items = new ArrayList<>(inspected);
         for (int i = 0; i < inspected; i++) {
-            String item = raw.get(i);
+            String item = snapshot.get(i);
             if (item == null) {
                 violations.add(new Violation(field, i, Reason.MISSING));
             } else {
@@ -102,34 +105,52 @@ public final class TaskSpecification {
     }
 
     /**
-     * Inspects {@code raw} in one pass without copying it, so an oversized untrusted string is
-     * rejected before any normalized copy is allocated. The normalized form (edge whitespace
-     * stripped, {@code \r\n} and {@code \r} as {@code \n}) is built only for accepted values.
+     * Strips, inspects and normalizes {@code raw} in a single pass over its code points. The
+     * normalized text is buffered only up to {@code maxLength}, so memory stays bounded however large
+     * the untrusted input is; a rejected value yields {@code ""}.
      */
     private static String text(
             String raw, Field field, int index, int maxLength, boolean multiline, List<Violation> violations) {
         int start = 0;
         int end = raw.length();
-        while (start < end && isBlank(raw.codePointAt(start))) {
-            start += Character.charCount(raw.codePointAt(start));
+        while (start < end) {
+            int codePoint = raw.codePointAt(start);
+            if (!isBlank(codePoint)) {
+                break;
+            }
+            start += Character.charCount(codePoint);
         }
-        while (end > start && isBlank(raw.codePointBefore(end))) {
-            end -= Character.charCount(raw.codePointBefore(end));
+        while (end > start) {
+            int codePoint = raw.codePointBefore(end);
+            if (!isBlank(codePoint)) {
+                break;
+            }
+            end -= Character.charCount(codePoint);
         }
         if (start == end) {
             violations.add(new Violation(field, index, Reason.BLANK));
             return "";
         }
 
+        StringBuilder normalized = new StringBuilder(Math.min(end - start, maxLength));
         int length = 0;
         boolean disallowed = false;
-        for (int i = start; i < end; i++) {
-            char c = raw.charAt(i);
-            if (c == '\r' && i + 1 < end && raw.charAt(i + 1) == '\n') {
-                continue; // the CRLF pair counts once, at its LF
+        for (int i = start; i < end; ) {
+            int codePoint = raw.codePointAt(i);
+            i += Character.charCount(codePoint);
+            if (codePoint == '\r' && i < end && raw.charAt(i) == '\n') {
+                continue; // a CRLF pair is one line break, counted at its LF
+            }
+            if (isLineBreak(codePoint)) {
+                disallowed |= !multiline;
+                codePoint = '\n';
+            } else {
+                disallowed |= isDisallowed(codePoint);
+            }
+            if (length < maxLength) {
+                normalized.appendCodePoint(codePoint);
             }
             length++;
-            disallowed |= isDisallowed(c, multiline);
         }
         if (length > maxLength) {
             violations.add(new Violation(field, index, Reason.TOO_LONG));
@@ -137,38 +158,36 @@ public final class TaskSpecification {
         if (disallowed) {
             violations.add(new Violation(field, index, Reason.CONTAINS_CONTROL_CHARACTERS));
         }
-        if (length > maxLength || disallowed) {
-            return "";
-        }
-
-        StringBuilder normalized = new StringBuilder(length);
-        for (int i = start; i < end; i++) {
-            char c = raw.charAt(i);
-            if (c == '\r') {
-                if (i + 1 < end && raw.charAt(i + 1) == '\n') {
-                    continue;
-                }
-                c = '\n';
-            }
-            normalized.append(c);
-        }
-        return normalized.toString();
+        return length > maxLength || disallowed ? "" : normalized.toString();
     }
 
-    /** Whitespace per Java plus Unicode space separators such as U+00A0, U+2007 and U+202F. */
+    /** Line breaks, tab, Unicode space separators and zero-width spaces are stripped at the edges. */
     private static boolean isBlank(int codePoint) {
-        return Character.isWhitespace(codePoint) || Character.isSpaceChar(codePoint);
+        if (isLineBreak(codePoint) || codePoint == '\t') {
+            return true;
+        }
+        return !Character.isISOControl(codePoint)
+                && (Character.isSpaceChar(codePoint)
+                        || codePoint == 0x200B
+                        || codePoint == 0x2060
+                        || codePoint == 0xFEFF);
     }
 
-    /**
-     * Control characters other than tab are disallowed; line breaks (LF, CR, U+2028, U+2029) are
-     * allowed only in multiline fields.
-     */
-    private static boolean isDisallowed(char c, boolean multiline) {
-        if (c == '\n' || c == '\r' || c == '\u2028' || c == '\u2029') {
-            return !multiline;
-        }
-        return Character.isISOControl(c) && c != '\t';
+    /** LF, CR, NEL, LINE SEPARATOR and PARAGRAPH SEPARATOR; all normalize to {@code \n}. */
+    private static boolean isLineBreak(int codePoint) {
+        return codePoint == '\n' || codePoint == '\r' || codePoint == 0x85
+                || codePoint == 0x2028 || codePoint == 0x2029;
+    }
+
+    /** Control characters other than tab, bidirectional controls and unpaired surrogates. */
+    private static boolean isDisallowed(int codePoint) {
+        return (Character.isISOControl(codePoint) && codePoint != '\t')
+                || codePoint == 0x061C
+                || codePoint == 0x200E
+                || codePoint == 0x200F
+                || (codePoint >= 0x202A && codePoint <= 0x202E)
+                || (codePoint >= 0x2066 && codePoint <= 0x2069)
+                || (codePoint >= 0xD800 && codePoint <= 0xDFFF);
     }
 
     public String title() {
