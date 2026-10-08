@@ -53,7 +53,8 @@ public final class WorkspacePathResolver {
                 return reject(candidate, Reason.TRAVERSAL);
             }
         }
-        Path target = root.path().resolve(relative.normalize());
+        // Not normalized: the filesystem must see every segment so `file.txt/.` fails as it would on use.
+        Path target = root.path().resolve(relative);
         try {
             return contained(root, candidate, target.toRealPath(), true);
         } catch (NoSuchFileException e) {
@@ -61,30 +62,47 @@ public final class WorkspacePathResolver {
         } catch (AccessDeniedException e) {
             return reject(candidate, Reason.NOT_ACCESSIBLE);
         } catch (FileSystemException e) {
-            return reject(candidate, Reason.UNRESOLVABLE);
+            return rejectUnresolvable(candidate, target, e);
         }
     }
 
     private static WorkspacePathResolution resolveMissingLeaf(WorkspaceRoot root, String candidate, Path target)
             throws IOException {
-        // The root itself vanished, or the leaf is a dangling link whose target cannot be proven.
-        if (target.equals(root.path()) || Files.isSymbolicLink(target)) {
+        // A trailing `.` names the missing directory itself, not a creatable leaf.
+        if (target.getFileName().toString().equals(".")) {
+            return reject(candidate, Reason.PARENT_NOT_FOUND);
+        }
+        // A dangling link's target cannot be proven to stay inside the root.
+        if (Files.isSymbolicLink(target)) {
             return reject(candidate, Reason.UNRESOLVABLE);
         }
+        Path parent = target.getParent();
         Path realParent;
         try {
-            realParent = target.getParent().toRealPath();
+            realParent = parent.toRealPath();
         } catch (NoSuchFileException e) {
             return reject(candidate, Reason.PARENT_NOT_FOUND);
         } catch (AccessDeniedException e) {
             return reject(candidate, Reason.NOT_ACCESSIBLE);
         } catch (FileSystemException e) {
-            return reject(candidate, Reason.UNRESOLVABLE);
+            return rejectUnresolvable(candidate, parent, e);
         }
         if (!Files.isDirectory(realParent, LinkOption.NOFOLLOW_LINKS)) {
             return reject(candidate, Reason.UNRESOLVABLE);
         }
         return contained(root, candidate, realParent.resolve(target.getFileName()), false);
+    }
+
+    /**
+     * Rejects resolution failures caused by the input (non-directory component, symlink loop) and
+     * rethrows any other filesystem failure so callers can tell it apart from invalid input.
+     */
+    private static WorkspacePathResolution rejectUnresolvable(String candidate, Path path, FileSystemException e)
+            throws FileSystemException {
+        if (WorkspaceRoot.classifyUnresolvable(path) == null) {
+            throw e;
+        }
+        return reject(candidate, Reason.UNRESOLVABLE);
     }
 
     private static WorkspacePathResolution contained(

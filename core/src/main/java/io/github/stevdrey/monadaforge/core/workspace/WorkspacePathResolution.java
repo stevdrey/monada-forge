@@ -31,11 +31,53 @@ public sealed interface WorkspacePathResolution {
      * of its existing parent directory plus the leaf name when {@code existing} is {@code false}. The
      * result proves containment only at resolution time; callers performing I/O later must account
      * for the filesystem changing in between.
+     *
+     * <p>Only {@link WorkspacePathResolver} creates instances, so holding one implies the path was
+     * checked; it is a class rather than a record because a record's constructor would be public.
      */
-    record Resolved(WorkspaceRoot root, Path path, boolean existing) implements WorkspacePathResolution {
-        public Resolved {
-            Objects.requireNonNull(root, "root");
-            Objects.requireNonNull(path, "path");
+    final class Resolved implements WorkspacePathResolution {
+
+        private final WorkspaceRoot root;
+        private final Path path;
+        private final boolean existing;
+
+        Resolved(WorkspaceRoot root, Path path, boolean existing) {
+            this.root = Objects.requireNonNull(root, "root");
+            this.path = Objects.requireNonNull(path, "path");
+            this.existing = existing;
+        }
+
+        /** The workspace root the path was resolved against. */
+        public WorkspaceRoot root() {
+            return root;
+        }
+
+        /** The canonical absolute path, inside {@link #root()}. */
+        public Path path() {
+            return path;
+        }
+
+        /** Whether the entry existed at resolution time. */
+        public boolean existing() {
+            return existing;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            return other instanceof Resolved that
+                    && root.equals(that.root)
+                    && path.equals(that.path)
+                    && existing == that.existing;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(root, path, existing);
+        }
+
+        @Override
+        public String toString() {
+            return "Resolved[root=" + root + ", path=" + path + ", existing=" + existing + "]";
         }
     }
 

@@ -11,6 +11,8 @@ import io.github.stevdrey.monadaforge.core.workspace.WorkspacePathResolution.Rea
 import io.github.stevdrey.monadaforge.core.workspace.WorkspacePathResolution.Rejected;
 import io.github.stevdrey.monadaforge.core.workspace.WorkspacePathResolution.Resolved;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
@@ -162,6 +164,29 @@ class WorkspacePathResolverTest {
         Files.createFile(ws.resolve("file.txt"));
 
         assertRejected("file.txt/child", Reason.UNRESOLVABLE);
+    }
+
+    @Test
+    void rejectsDotAfterRegularFile() throws IOException {
+        Files.createFile(ws.resolve("file.txt"));
+
+        assertRejected("file.txt/.", Reason.UNRESOLVABLE);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"missing/.", "a/missing/."})
+    void rejectsDotAfterMissingDirectory(String candidate) throws IOException {
+        Files.createDirectory(ws.resolve("a"));
+
+        assertRejected(candidate, Reason.PARENT_NOT_FOUND);
+    }
+
+    @Test
+    void resolvedCannotBeConstructedOutsideThePackage() {
+        for (Constructor<?> constructor : Resolved.class.getDeclaredConstructors()) {
+            int modifiers = constructor.getModifiers();
+            assertFalse(Modifier.isPublic(modifiers) || Modifier.isProtected(modifiers), constructor.toString());
+        }
     }
 
     @Test
