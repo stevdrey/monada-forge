@@ -68,7 +68,7 @@ public final class WorkspaceRoot {
      * Walks the un-normalized path prefix by prefix (so {@code ..} is resolved by the filesystem, not
      * lexically) to classify a resolution failure as invalid input; {@code null} if it is not.
      */
-    private static WorkspaceRootValidation.Reason classifyUnresolvable(Path candidate) {
+    static WorkspaceRootValidation.Reason classifyUnresolvable(Path candidate) {
         Path absolute = candidate.toAbsolutePath();
         Path prefix = absolute.getRoot();
         int count = absolute.getNameCount();

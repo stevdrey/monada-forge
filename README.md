@@ -31,7 +31,7 @@ On Windows, use `gradlew.bat`. Running the application requires a graphical sess
 
 | Path | Responsibility |
 | --- | --- |
-| `core/` | Framework-independent domain and application module; currently exposes the validated `WorkspaceRoot` boundary |
+| `core/` | Framework-independent domain and application module; currently exposes the validated `WorkspaceRoot` boundary and contained workspace-relative path resolution (`WorkspacePathResolver`) |
 | `desktop/` | JavaFX entry point, presentation and resources; depends on `core` |
 | `docs/` | Product guide, architecture, ADRs, security, development and verification |
 | `.agents/` | Provider-neutral coding-agent guidance |
