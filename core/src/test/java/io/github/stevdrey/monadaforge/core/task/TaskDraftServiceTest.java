@@ -3,7 +3,6 @@ package io.github.stevdrey.monadaforge.core.task;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -181,7 +180,21 @@ class TaskDraftServiceTest {
         service.selectPaths(List.of("docs"), null);
 
         assertEquals(first, service.current());
-        assertNotEquals(first.scope(), TaskScope.unset());
+        assertEquals(
+                List.of("docs"),
+                ((TaskScope.Paths) service.current().scope())
+                        .allowed().stream().map(TaskScope.ScopeEntry::relative).toList());
+    }
+
+    @Test
+    void reselectingSameWorkspaceKeepsScope() throws IOException {
+        completeDraft();
+        TaskDraft before = service.current();
+
+        selectWorkspace(ws);
+
+        assertEquals(before, service.current());
+        assertEquals(Status.REVIEWABLE, service.current().status());
     }
 
     @Test

@@ -13,21 +13,23 @@ import java.util.Objects;
  * <p>Each operation validates its input through the owning component contract and returns that
  * contract's validation result unchanged, so callers keep the full violation detail. Only accepted
  * input replaces state; a rejected input leaves the draft exactly as it was. Nothing is persisted,
- * and no file is created or modified. Methods are synchronized so a snapshot is always consistent.
+ * and no file is created or modified. Changes are serialized; reads never wait for them, because a
+ * snapshot is immutable and always consistent.
  */
 public final class TaskDraftService {
 
-    private TaskDraft draft = TaskDraft.empty();
+    private volatile TaskDraft draft = TaskDraft.empty();
 
     /** The current draft; an immutable snapshot unaffected by later changes. */
-    public synchronized TaskDraft current() {
+    public TaskDraft current() {
         return draft;
     }
 
     /**
      * Validates {@code candidate} and, if accepted, makes it the workspace. The scope is reset to
-     * {@linkplain TaskScope#unset() unset} because it was validated against the previous root; the
-     * specification is kept.
+     * {@linkplain TaskScope#unset() unset} when the root differs from the current one, because it
+     * was validated against the previous root; re-selecting the same root keeps it. The
+     * specification is always kept.
      *
      * @throws IOException on unexpected I/O failures, as opposed to an invalid candidate
      */

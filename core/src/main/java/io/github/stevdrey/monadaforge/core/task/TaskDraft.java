@@ -50,8 +50,10 @@ public final class TaskDraft {
     }
 
     TaskDraft withWorkspace(WorkspaceRoot newWorkspace) {
-        // A scope is bound to the root it was validated against, so it never survives a new root.
-        return new TaskDraft(Objects.requireNonNull(newWorkspace, "workspace"), specification, TaskScope.unset());
+        Objects.requireNonNull(newWorkspace, "workspace");
+        // A scope is bound to the root it was validated against, so it never survives a different root.
+        TaskScope keptScope = newWorkspace.equals(workspace) ? scope : TaskScope.unset();
+        return new TaskDraft(newWorkspace, specification, keptScope);
     }
 
     TaskDraft withSpecification(TaskSpecification newSpecification) {
