@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -310,7 +311,7 @@ class TaskScopeTest {
 
     @Test
     void boundsInspectedEntries() throws IOException {
-        List<String> tooMany = java.util.Collections.nCopies(TaskScope.MAX_ENTRIES + 1, "docs");
+        List<String> tooMany = Collections.nCopies(TaskScope.MAX_ENTRIES + 1, "docs");
 
         List<Violation> allowed = rejectedPaths(tooMany, null);
         assertTrue(allowed.contains(new Violation(Field.ALLOWED, Violation.NO_INDEX, Reason.TOO_MANY)));
@@ -321,6 +322,34 @@ class TaskScopeTest {
         List<Violation> excluded = rejected(TaskScope.validateEntireWorkspace(root, tooMany));
         assertTrue(excluded.contains(new Violation(Field.EXCLUDED, Violation.NO_INDEX, Reason.TOO_MANY)));
         assertTrue(excluded.stream().noneMatch(v -> v.index() >= TaskScope.MAX_ENTRIES));
+    }
+
+    @Test
+    void rejectsNonExistentEntries() throws IOException {
+        assertEquals(
+                List.of(new Violation(Field.ALLOWED, 1, Reason.NOT_FOUND)),
+                rejectedPaths(List.of("src", "src/mian"), null));
+        assertEquals(
+                List.of(new Violation(Field.EXCLUDED, 0, Reason.NOT_FOUND)),
+                rejected(TaskScope.validateEntireWorkspace(root, List.of("nope"))));
+        assertEquals(
+                List.of(new Violation(Field.EXCLUDED, 0, Reason.NOT_FOUND)),
+                rejectedPaths(List.of("src"), List.of("src/nope")));
+    }
+
+    @Test
+    void invalidAllowedEntriesDoNotMakeExclusionsLookContradictory() throws IOException {
+        assertEquals(
+                List.of(new Violation(Field.ALLOWED, 0, Reason.TRAVERSAL)),
+                rejectedPaths(List.of("../x"), List.of("src")));
+        assertEquals(
+                List.of(new Violation(Field.ALLOWED, 1, Reason.NOT_FOUND)),
+                rejectedPaths(List.of("docs", "src/mian"), List.of("build")).stream()
+                        .filter(v -> v.field() == Field.ALLOWED)
+                        .toList());
+        assertEquals(
+                List.of(new Violation(Field.ALLOWED, Violation.NO_INDEX, Reason.EMPTY_ALLOWED)),
+                rejectedPaths(List.of(), List.of("src")));
     }
 
     @Test

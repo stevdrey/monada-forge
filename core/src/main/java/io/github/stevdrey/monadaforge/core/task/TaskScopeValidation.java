@@ -26,6 +26,8 @@ public sealed interface TaskScopeValidation {
         ABSOLUTE,
         /** The entry contains a {@code ..} segment. */
         TRAVERSAL,
+        /** The entry does not exist; scope entries must name existing files or directories. */
+        NOT_FOUND,
         /** The entry resolves, through symbolic links, outside the workspace root. */
         ESCAPES_WORKSPACE,
         /** Neither the entry nor its parent directory exists. */

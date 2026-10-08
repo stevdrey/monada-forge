@@ -1,19 +1,12 @@
 package io.github.stevdrey.monadaforge.core.task;
 
-import io.github.stevdrey.monadaforge.core.task.TaskScopeValidation.Field;
-import io.github.stevdrey.monadaforge.core.task.TaskScopeValidation.Reason;
-import io.github.stevdrey.monadaforge.core.task.TaskScopeValidation.Violation;
 import io.github.stevdrey.monadaforge.core.workspace.WorkspacePathResolution;
 import io.github.stevdrey.monadaforge.core.workspace.WorkspacePathResolver;
 import io.github.stevdrey.monadaforge.core.workspace.WorkspaceRoot;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 /**
  * An immutable, validated filesystem scope for a task: the workspace areas later stages may touch.
@@ -27,8 +20,8 @@ import java.util.Set;
  *   <li>{@link Paths}: a non-empty list of allowed areas, minus any exclusions.
  * </ul>
  *
- * <p>Every entry passes {@link WorkspacePathResolver} and is authorized by its canonical path, so a
- * symbolic link cannot widen the scope. Nested allowed entries are accepted and kept as supplied; an
+ * <p>Every entry must exist, passes {@link WorkspacePathResolver} and is authorized by its canonical
+ * path, so a symbolic link cannot widen the scope. Nested allowed entries are accepted and kept as supplied; an
  * exclusion nested inside an allowed entry is a valid carve-out and always wins over inclusion.
  * Instances come only from the {@code validate*} factories and {@link #unset()}. Nothing is read,
  * created or modified, and a scope can only be replaced, never widened in place.
@@ -51,40 +44,22 @@ public sealed interface TaskScope {
      */
     static TaskScopeValidation validateEntireWorkspace(WorkspaceRoot root, List<String> excluded)
             throws IOException {
-        Objects.requireNonNull(root, "root");
-        List<Violation> violations = new ArrayList<>();
-        List<ScopeEntry> excludedEntries = resolve(root, excluded, Field.EXCLUDED, violations);
-        if (!violations.isEmpty()) {
-            return new TaskScopeValidation.Rejected(violations);
-        }
-        return new TaskScopeValidation.Accepted(new EntireWorkspace(root, excludedEntries));
+        return TaskScopeValidator.entireWorkspace(Objects.requireNonNull(root, "root"), excluded);
     }
 
     /**
-     * Validates a scope limited to {@code allowed} areas, minus optional {@code excluded} entries. A
-     * {@code null} {@code excluded} list means no exclusions; a {@code null} or empty {@code allowed}
-     * list is rejected rather than read as the whole workspace. Every violation is reported, grouped
-     * by field. Only the first {@link #MAX_ENTRIES} entries of each list are inspected.
+     * Validates a scope limited to {@code allowed} areas, minus optional {@code excluded} entries.
+     * Entries must name existing files or directories. A {@code null} {@code excluded} list means no
+     * exclusions; a {@code null} or empty {@code allowed} list is rejected rather than read as the
+     * whole workspace. Every violation is reported, grouped by field; the allowed/excluded
+     * contradiction check runs only once the allowed list is otherwise valid. Only the first {@link
+     * #MAX_ENTRIES} entries of each list are inspected.
      *
      * @throws IOException on unexpected I/O failures, as opposed to invalid or escaping input
      */
     static TaskScopeValidation validatePaths(WorkspaceRoot root, List<String> allowed, List<String> excluded)
             throws IOException {
-        Objects.requireNonNull(root, "root");
-        List<Violation> violations = new ArrayList<>();
-        List<ScopeEntry> allowedEntries = resolve(root, allowed, Field.ALLOWED, violations);
-        if (allowed == null) {
-            violations.add(new Violation(Field.ALLOWED, Violation.NO_INDEX, Reason.MISSING));
-        } else if (allowedEntries.isEmpty() && violations.isEmpty()) {
-            violations.add(new Violation(Field.ALLOWED, Violation.NO_INDEX, Reason.EMPTY_ALLOWED));
-        }
-        List<ScopeEntry> excludedEntries = resolve(root, excluded, Field.EXCLUDED, violations);
-        contradictions(allowedEntries, excludedEntries, violations);
-        if (!violations.isEmpty()) {
-            violations.sort(Comparator.comparing(Violation::field));
-            return new TaskScopeValidation.Rejected(violations);
-        }
-        return new TaskScopeValidation.Accepted(new Paths(root, allowedEntries, excludedEntries));
+        return TaskScopeValidator.paths(Objects.requireNonNull(root, "root"), allowed, excluded);
     }
 
     /**
@@ -93,77 +68,6 @@ public sealed interface TaskScope {
      * check; the filesystem is not consulted.
      */
     boolean permits(WorkspacePathResolution.Resolved resolution);
-
-    private static List<ScopeEntry> resolve(
-            WorkspaceRoot root, List<String> raw, Field field, List<Violation> violations) throws IOException {
-        // One bounded snapshot of the untrusted list: its size and elements are read exactly once.
-        List<String> snapshot = raw == null ? List.of() : raw.stream().limit(MAX_ENTRIES + 1L).toList();
-        if (snapshot.size() > MAX_ENTRIES) {
-            violations.add(new Violation(field, Violation.NO_INDEX, Reason.TOO_MANY));
-        }
-        int inspected = Math.min(snapshot.size(), MAX_ENTRIES);
-        List<ScopeEntry> entries = new ArrayList<>(inspected);
-        Set<Path> seen = new HashSet<>();
-        for (int i = 0; i < inspected; i++) {
-            String candidate = snapshot.get(i);
-            if (candidate == null) {
-                violations.add(new Violation(field, i, Reason.MISSING));
-                continue;
-            }
-            switch (WorkspacePathResolver.resolve(root, candidate)) {
-                case WorkspacePathResolution.Rejected rejected ->
-                    violations.add(new Violation(field, i, map(rejected.reason())));
-                case WorkspacePathResolution.Resolved resolved -> {
-                    if (resolved.path().equals(root.path())) {
-                        violations.add(new Violation(field, i, Reason.WORKSPACE_ROOT));
-                    } else if (!seen.add(resolved.path())) {
-                        violations.add(new Violation(field, i, Reason.DUPLICATE));
-                    } else {
-                        entries.add(new ScopeEntry(i, relative(root, resolved.path()), resolved.path()));
-                    }
-                }
-            }
-        }
-        return List.copyOf(entries);
-    }
-
-    private static void contradictions(
-            List<ScopeEntry> allowed, List<ScopeEntry> excluded, List<Violation> violations) {
-        for (ScopeEntry entry : allowed) {
-            if (excluded.stream().anyMatch(exclusion -> entry.path().startsWith(exclusion.path()))) {
-                violations.add(new Violation(Field.ALLOWED, entry.index(), Reason.ALLOWED_AND_EXCLUDED_CONTRADICT));
-            }
-        }
-        for (ScopeEntry exclusion : excluded) {
-            boolean related = allowed.stream()
-                    .anyMatch(entry -> exclusion.path().startsWith(entry.path())
-                            || entry.path().startsWith(exclusion.path()));
-            if (!related) {
-                violations.add(new Violation(Field.EXCLUDED, exclusion.index(), Reason.ALLOWED_AND_EXCLUDED_CONTRADICT));
-            }
-        }
-    }
-
-    private static Reason map(WorkspacePathResolution.Reason reason) {
-        return switch (reason) {
-            case INVALID_PATH -> Reason.INVALID_PATH;
-            case ABSOLUTE -> Reason.ABSOLUTE;
-            case TRAVERSAL -> Reason.TRAVERSAL;
-            case ESCAPES_WORKSPACE -> Reason.ESCAPES_WORKSPACE;
-            case PARENT_NOT_FOUND -> Reason.PARENT_NOT_FOUND;
-            case NOT_ACCESSIBLE -> Reason.NOT_ACCESSIBLE;
-            case UNRESOLVABLE -> Reason.UNRESOLVABLE;
-        };
-    }
-
-    /** The stable user-visible form: root-relative, {@code /}-separated, never empty. */
-    private static String relative(WorkspaceRoot root, Path real) {
-        List<String> names = new ArrayList<>();
-        for (Path name : root.path().relativize(real)) {
-            names.add(name.toString());
-        }
-        return String.join("/", names);
-    }
 
     private static boolean covered(List<ScopeEntry> entries, Path path) {
         return entries.stream().anyMatch(entry -> path.startsWith(entry.path()));
@@ -174,19 +78,12 @@ public sealed interface TaskScope {
      * stands for. Only this package creates instances.
      */
     final class ScopeEntry {
-        private final int index;
         private final String relative;
         private final Path path;
 
-        private ScopeEntry(int index, String relative, Path path) {
-            this.index = index;
+        ScopeEntry(String relative, Path path) {
             this.relative = relative;
             this.path = path;
-        }
-
-        /** Position of the entry in the supplied list, for reporting. */
-        int index() {
-            return index;
         }
 
         /** Normalized workspace-relative path, {@code /}-separated; never empty. */
@@ -217,9 +114,9 @@ public sealed interface TaskScope {
 
     /** No scope has been supplied; permits nothing. */
     final class Unset implements TaskScope {
-        private static final Unset INSTANCE = new Unset();
+        static final Unset INSTANCE = new Unset();
 
-        private Unset() {}
+        Unset() {}
 
         @Override
         public boolean permits(WorkspacePathResolution.Resolved resolution) {
@@ -238,7 +135,7 @@ public sealed interface TaskScope {
         private final WorkspaceRoot root;
         private final List<ScopeEntry> excluded;
 
-        private EntireWorkspace(WorkspaceRoot root, List<ScopeEntry> excluded) {
+        EntireWorkspace(WorkspaceRoot root, List<ScopeEntry> excluded) {
             this.root = root;
             this.excluded = excluded;
         }
@@ -279,7 +176,7 @@ public sealed interface TaskScope {
         private final List<ScopeEntry> allowed;
         private final List<ScopeEntry> excluded;
 
-        private Paths(WorkspaceRoot root, List<ScopeEntry> allowed, List<ScopeEntry> excluded) {
+        Paths(WorkspaceRoot root, List<ScopeEntry> allowed, List<ScopeEntry> excluded) {
             this.root = root;
             this.allowed = allowed;
             this.excluded = excluded;
