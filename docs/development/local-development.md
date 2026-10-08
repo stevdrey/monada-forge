@@ -26,6 +26,10 @@ Use `gradlew.bat` on Windows. Import the repository root as a Gradle project in 
 
 Keep visual presentation in JavaFX CSS stylesheets under `desktop/src/main/resources`. Apply styles through CSS class or ID selectors and `getStyleClass()` / `setId()` in Java. Avoid `Node.setStyle(...)` and JavaFX style-property setters for static colors, typography, spacing, borders or similar presentation. Code-driven styling is appropriate for a genuinely runtime-dependent value or a JavaFX property that CSS cannot express; keep that logic small and document why a stylesheet cannot handle it.
 
+### Application shell style classes
+
+`ApplicationShell` hosts a header (`app-header`, `app-title`, `app-subtitle`), a scrollable content region (`app-content-scroll`, `app-content`) and a status region (`app-status-bar`). `StatusBar.show(StatusKind, String)` switches between `status-info`, `status-success`, `status-warning` and `status-error`. Screens hosted by the shell use `view`, `view-title` and `view-body`, and forms use `form-field`, `form-label`, `form-hint`, `form-error`, `invalid` (on text inputs) and `button primary`. Colors are look-up colors (`-forge-*`) declared on `.root` in `forge.css`.
+
 ## Verification
 
 `build` compiles both JPMS modules, processes resources and assembles the application distributions. `core` has behavior-focused JUnit tests (`./gradlew :core:test`); `desktop` has none yet, so its `test` task may report `NO-SOURCE`. Add behavior-focused tests with each new use case.
