@@ -6,7 +6,7 @@ The developer remains responsible for intent, policy and acceptance. Model outpu
 
 ## Current implementation
 
-- A Java 27 / JavaFX 27 desktop welcome window.
+- A Java 27 / JavaFX 27 desktop application with workspace selection and manual task intake.
 - A Gradle multi-project build with `desktop` and `core` JPMS modules.
 - Repository-based documentation and contribution guidance.
 

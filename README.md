@@ -2,7 +2,7 @@
 
 Monada Forge is a desktop workspace for agent-assisted software delivery: start from a task, assemble relevant context, coordinate implementation and review, and retain evidence about quality, feedback and cost.
 
-**Status:** initial project scaffold. The application lets you select a local workspace folder and then shows a welcome window. Task ingestion, agents, external integrations, execution and persistence are not implemented yet.
+**Status:** initial project scaffold. The application lets you select a local workspace folder and then enter a task manually (title, description, ordered acceptance criteria, constraints and non-goals), validated by `core`. Task entry is held in memory only. External task sources, agents, external integrations, execution and persistence are not implemented yet.
 
 ## Stack
 
@@ -31,7 +31,7 @@ On Windows, use `gradlew.bat`. Running the application requires a graphical sess
 
 | Path | Responsibility |
 | --- | --- |
-| `core/` | Framework-independent domain and application module; currently exposes the validated `WorkspaceRoot` boundary and contained workspace-relative path resolution (`WorkspacePathResolver`) |
+| `core/` | Framework-independent domain and application module; currently exposes the validated `WorkspaceRoot` boundary, contained workspace-relative path resolution (`WorkspacePathResolver`), the manual `TaskSpecification` and `TaskScope` models and the in-memory `TaskDraftService` |
 | `desktop/` | JavaFX entry point, presentation and resources; depends on `core` |
 | `docs/` | Product guide, architecture, ADRs, security, development and verification |
 | `.agents/` | Provider-neutral coding-agent guidance |

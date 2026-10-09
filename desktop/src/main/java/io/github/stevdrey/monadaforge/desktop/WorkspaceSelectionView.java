@@ -59,6 +59,16 @@ final class WorkspaceSelectionView extends VBox {
         render(selection.state());
     }
 
+    /** The workspace currently selected and validated, or {@code null} while none is. */
+    WorkspaceRoot selectedRoot() {
+        return selection.state() instanceof WorkspaceSelection.State.Selected selected ? selected.root() : null;
+    }
+
+    /** Shows {@code message} as the reason {@code path} cannot be used, disabling Continue. */
+    void reject(Path path, String message) {
+        selection.reject(path, message);
+    }
+
     /** Offers to keep or discard task text entered earlier; only shown when there is some. */
     void offerKeepingTask(boolean visible) {
         keepTask.setVisible(visible);

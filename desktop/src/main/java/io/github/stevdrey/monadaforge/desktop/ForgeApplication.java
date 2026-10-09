@@ -40,7 +40,7 @@ public final class ForgeApplication extends Application {
                 intakeView.reset();
                 drafts.clear();
             }
-            registerWorkspace(drafts, root, shell, intakeView);
+            registerWorkspace(drafts, root, shell, selectionView, intakeView);
         });
         shell.setContent(selectionView);
         selectionView.publishStatus();
@@ -54,24 +54,39 @@ public final class ForgeApplication extends Application {
         stage.show();
     }
 
-    /** Registers the workspace with core off the UI thread (it touches the file system), then shows intake. */
+    /**
+     * Registers the selected workspace with core off the UI thread (it touches the file system), then
+     * shows intake. The result is applied only while {@code root} is still the selected workspace, so
+     * a slow registration cannot override a newer choice. A rejection is returned to the selection
+     * view with its reason.
+     */
     private void registerWorkspace(
-            TaskDraftService drafts, WorkspaceRoot root, ApplicationShell shell, TaskIntakeView intakeView) {
+            TaskDraftService drafts,
+            WorkspaceRoot root,
+            ApplicationShell shell,
+            WorkspaceSelectionView selectionView,
+            TaskIntakeView intakeView) {
         validation.execute(() -> {
-            boolean accepted;
+            String failure;
             try {
-                accepted = drafts.selectWorkspace(root.path()) instanceof WorkspaceRootValidation.Accepted;
+                failure = switch (drafts.selectWorkspace(root.path())) {
+                    case WorkspaceRootValidation.Accepted _ -> null;
+                    case WorkspaceRootValidation.Rejected rejected -> WorkspaceMessages.describe(rejected.reason());
+                };
             } catch (IOException | RuntimeException e) {
-                accepted = false;
+                failure = WorkspaceMessages.UNEXPECTED_FAILURE;
             }
-            boolean ok = accepted;
+            String message = failure;
             Platform.runLater(() -> {
-                if (ok) {
+                if (selectionView.selectedRoot() == null || !selectionView.selectedRoot().path().equals(root.path())) {
+                    return; // the user has since chosen something else
+                }
+                if (message == null) {
                     intakeView.setWorkspace(root.path());
                     shell.setContent(intakeView);
                     intakeView.publishStatus();
                 } else {
-                    shell.status().show(StatusKind.ERROR, WorkspaceMessages.UNEXPECTED_FAILURE);
+                    selectionView.reject(root.path(), message);
                 }
             });
         });

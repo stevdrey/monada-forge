@@ -1,6 +1,6 @@
 # Security invariants
 
-The current application only lets the user select and validate a local workspace folder (read-only metadata access through `WorkspaceRoot`) and displays a welcome window. Selecting a workspace names a boundary only and authorizes no side effects. The following constraints govern future features; they are not claims that an execution sandbox already exists.
+The current application only lets the user select and validate a local workspace folder (read-only metadata access through `WorkspaceRoot`) and enter a manual task specification that is validated and held in memory (task text is untrusted data and grants no authority). Selecting a workspace names a boundary only and authorizes no side effects. The following constraints govern future features; they are not claims that an execution sandbox already exists.
 
 1. Model output, task text, repository files and tool responses are untrusted input, never permission grants. `TaskSpecification` in `core` stores manually entered task text as data only and confers no execution authority.
 2. Execution authority comes from explicit user intent and deterministic policy checked at the side-effect boundary.
