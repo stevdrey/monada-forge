@@ -1,16 +1,71 @@
-.root {
+/* Palette and typography, declared on the shell so it works wherever the shell is placed. */
+.app-shell {
+    -forge-surface: #f4f6fa;
+    -forge-panel: #ffffff;
+    -forge-border: #d5dbe6;
+    -forge-text: #233047;
+    -forge-text-muted: #5b6980;
+    -forge-info-bg: #e3ecfb;
+    -forge-info-text: #1d3f8a;
+    -forge-success-bg: #e0efe9;
+    -forge-success-text: #15543c;
+    -forge-warning-bg: #fbf0d9;
+    -forge-warning-text: #7a4b00;
+    -forge-error-bg: #fbe3e3;
+    -forge-error-text: #8a1c1c;
+
     -fx-font-family: "System";
     -fx-font-size: 15px;
-    -fx-background-color: #f4f6fa;
+    -fx-background-color: -forge-surface;
 }
-.label { -fx-text-fill: #233047; }
-.title {
-    -fx-font-size: 32px;
+.label { -fx-text-fill: -forge-text; }
+
+/* Shell regions */
+
+.app-header {
+    -fx-background-color: -forge-panel;
+    -fx-border-color: transparent transparent -forge-border transparent;
+    -fx-padding: 16px 24px;
+}
+.app-title {
+    -fx-font-size: 24px;
     -fx-font-weight: bold;
 }
-.status {
-    -fx-background-color: #e0efe9;
-    -fx-text-fill: #15543c;
-    -fx-padding: 10px 16px;
-    -fx-background-radius: 8px;
+.app-subtitle { -fx-text-fill: -forge-text-muted; }
+
+.app-content-scroll,
+.app-content-scroll > .viewport {
+    -fx-background-color: transparent;
 }
+.app-content-scroll { -fx-padding: 0; }
+.app-content { -fx-padding: 24px; -fx-alignment: top-left; }
+
+.app-status-bar {
+    -fx-padding: 10px 24px;
+    -fx-alignment: center-left;
+}
+
+/* Hosted views */
+.view {
+    -fx-spacing: 12px;
+    -fx-background-color: -forge-panel;
+    -fx-border-color: -forge-border;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 24px;
+}
+.view-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+.view-body { -fx-text-fill: -forge-text-muted; }
+
+/* Status and feedback states (applied by StatusBar) */
+.status-info { -fx-background-color: -forge-info-bg; }
+.status-info .status-message { -fx-text-fill: -forge-info-text; }
+.status-success { -fx-background-color: -forge-success-bg; }
+.status-success .status-message { -fx-text-fill: -forge-success-text; }
+.status-warning { -fx-background-color: -forge-warning-bg; }
+.status-warning .status-message { -fx-text-fill: -forge-warning-text; }
+.status-error { -fx-background-color: -forge-error-bg; }
+.status-error .status-message { -fx-text-fill: -forge-error-text; }

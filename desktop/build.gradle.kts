@@ -12,7 +12,14 @@ javafx {
     modules("javafx.controls")
 }
 
-dependencies { implementation(project(":core")) }
+dependencies {
+    implementation(project(":core"))
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
+}
+
+tasks.test { useJUnitPlatform() }
 
 application {
     mainModule = "io.github.stevdrey.monadaforge.desktop"
