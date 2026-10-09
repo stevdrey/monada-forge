@@ -60,6 +60,10 @@ public final class TaskDraft {
         return new TaskDraft(workspace, Objects.requireNonNull(newSpecification, "specification"), scope);
     }
 
+    TaskDraft withoutSpecification() {
+        return new TaskDraft(workspace, null, scope);
+    }
+
     TaskDraft withScope(TaskScope newScope) {
         return new TaskDraft(workspace, specification, Objects.requireNonNull(newScope, "scope"));
     }

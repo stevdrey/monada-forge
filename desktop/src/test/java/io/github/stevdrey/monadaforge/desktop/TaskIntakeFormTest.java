@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 
 class TaskIntakeFormTest {
     private final TaskDraftService service = new TaskDraftService();
-    private final TaskIntakeForm form = new TaskIntakeForm(service::updateSpecification);
+    private final TaskIntakeForm form = new TaskIntakeForm(service::updateSpecification, service::clearSpecification);
 
     private void fillValid() {
         form.setTitle("Add export");
@@ -159,6 +159,27 @@ class TaskIntakeFormTest {
     @Test
     void scalarFieldsAreNotListFields() {
         assertThrows(IllegalArgumentException.class, () -> form.items(Field.TITLE));
+    }
+
+    @Test
+    void editingAnAcceptedFormDropsTheStoredSpecification() {
+        fillValid();
+        form.submit();
+        assertTrue(service.current().specification().isPresent());
+
+        form.setTitle("Changed");
+
+        assertTrue(service.current().specification().isEmpty());
+    }
+
+    @Test
+    void clearingAnAcceptedFormDropsTheStoredSpecification() {
+        fillValid();
+        form.submit();
+
+        form.clear();
+
+        assertTrue(service.current().specification().isEmpty());
     }
 
     @Test

@@ -144,6 +144,22 @@ class TaskDraftServiceTest {
     }
 
     @Test
+    void clearingTheSpecificationKeepsWorkspaceAndScopeAndIsIdempotent() throws IOException {
+        completeDraft();
+        TaskDraft before = service.current();
+
+        service.clearSpecification();
+        service.clearSpecification();
+
+        TaskDraft after = service.current();
+        assertTrue(after.specification().isEmpty());
+        assertEquals(before.workspace(), after.workspace());
+        assertEquals(before.scope(), after.scope());
+        assertEquals(List.of(Missing.SPECIFICATION), after.missing());
+        assertTrue(before.specification().isPresent());
+    }
+
+    @Test
     void replacingSpecificationKeepsWorkspaceAndScope() throws IOException {
         completeDraft();
         TaskDraft before = service.current();

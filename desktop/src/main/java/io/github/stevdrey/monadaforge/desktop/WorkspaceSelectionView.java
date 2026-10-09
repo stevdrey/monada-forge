@@ -25,6 +25,7 @@ final class WorkspaceSelectionView extends VBox {
     private final Button proceed = new Button("Continue");
     private Path lastDirectory;
     private Consumer<WorkspaceRoot> onContinue = root -> {};
+    private Runnable onSelectionChange = () -> {};
     private BiConsumer<StatusKind, String> onStatus = (kind, text) -> {};
 
     WorkspaceSelectionView(WorkspaceSelection.Validator validator, Executor background, Executor ui) {
@@ -59,9 +60,9 @@ final class WorkspaceSelectionView extends VBox {
         render(selection.state());
     }
 
-    /** The workspace currently selected and validated, or {@code null} while none is. */
-    WorkspaceRoot selectedRoot() {
-        return selection.state() instanceof WorkspaceSelection.State.Selected selected ? selected.root() : null;
+    /** Called whenever the selection state changes, e.g. a new choice, a result or a rejection. */
+    void setOnSelectionChange(Runnable handler) {
+        onSelectionChange = Objects.requireNonNull(handler, "handler");
     }
 
     /** Shows {@code message} as the reason {@code path} cannot be used, disabling Continue. */
@@ -116,6 +117,7 @@ final class WorkspaceSelectionView extends VBox {
         show(path, presentation.pathText());
         show(error, presentation.errorText());
         proceed.setDisable(!presentation.continueEnabled());
+        onSelectionChange.run();
         if (state instanceof WorkspaceSelection.State.Selected selected) {
             // Staleness of this directory is handled by WorkspaceChooser.pick, so Invalid keeps it.
             lastDirectory = selected.root().path();

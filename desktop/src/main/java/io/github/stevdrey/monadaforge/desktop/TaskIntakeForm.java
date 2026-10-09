@@ -41,10 +41,20 @@ final class TaskIntakeForm {
     private final List<Violation> errors = new ArrayList<>();
     private String title = "";
     private String description = "";
+    private final Runnable onInvalidated;
     private Result result = new Result.NotValidated();
 
     TaskIntakeForm(Function<TaskSpecificationDraft, TaskSpecificationValidation> validator) {
+        this(validator, () -> {});
+    }
+
+    /**
+     * @param onInvalidated run when an accepted result stops matching the form, so whoever stored the
+     *     accepted specification can drop it
+     */
+    TaskIntakeForm(Function<TaskSpecificationDraft, TaskSpecificationValidation> validator, Runnable onInvalidated) {
         this.validator = Objects.requireNonNull(validator, "validator");
+        this.onInvalidated = Objects.requireNonNull(onInvalidated, "onInvalidated");
         lists.put(Field.ACCEPTANCE_CRITERIA, new ArrayList<>(List.of("")));
         lists.put(Field.CONSTRAINTS, new ArrayList<>());
         lists.put(Field.NON_GOALS, new ArrayList<>());
@@ -140,7 +150,7 @@ final class TaskIntakeForm {
         lists.get(Field.CONSTRAINTS).clear();
         lists.get(Field.NON_GOALS).clear();
         errors.clear();
-        result = new Result.NotValidated();
+        invalidate();
     }
 
     /** Validates the current text through core; the entered values are left untouched. */
@@ -185,11 +195,18 @@ final class TaskIntakeForm {
 
     private void edited(Field field, int index) {
         errors.removeIf(violation -> violation.field() == field && violation.index() == index);
-        result = new Result.NotValidated();
+        invalidate();
     }
 
     private void restructured(Field field) {
         errors.removeIf(violation -> violation.field() == field);
+        invalidate();
+    }
+
+    private void invalidate() {
+        if (result instanceof Result.Valid) {
+            onInvalidated.run();
+        }
         result = new Result.NotValidated();
     }
 }

@@ -17,6 +17,8 @@ public final class ForgeApplication extends Application {
 
     // One cheap virtual thread per validation: a newer selection must not queue behind a stalled one.
     private ExecutorService validation;
+    // Identifies the latest selection or Continue; older registration results are dropped (UI thread only).
+    private long registration;
 
     @Override
     public void start(Stage stage) {
@@ -25,10 +27,11 @@ public final class ForgeApplication extends Application {
         var shell = new ApplicationShell(PRODUCT_NAME, "A workspace for agent-assisted software delivery.");
         var selectionView = new WorkspaceSelectionView(WorkspaceRoot::validate, validation, Platform::runLater);
         selectionView.setOnStatus(shell.status()::show);
+        selectionView.setOnSelectionChange(() -> registration++);
         // One form instance for the session, so entered text survives changing the workspace.
         var drafts = new TaskDraftService();
         TaskIntakeView[] intake = new TaskIntakeView[1];
-        intake[0] = new TaskIntakeView(new TaskIntakeForm(drafts::updateSpecification), () -> {
+        intake[0] = new TaskIntakeView(new TaskIntakeForm(drafts::updateSpecification, drafts::clearSpecification), () -> {
             selectionView.offerKeepingTask(intake[0].hasContent());
             shell.setContent(selectionView);
             selectionView.publishStatus();
@@ -40,7 +43,7 @@ public final class ForgeApplication extends Application {
                 intakeView.reset();
                 drafts.clear();
             }
-            registerWorkspace(drafts, root, shell, selectionView, intakeView);
+            registerWorkspace(drafts, root, ++registration, shell, selectionView, intakeView);
         });
         shell.setContent(selectionView);
         selectionView.publishStatus();
@@ -56,13 +59,14 @@ public final class ForgeApplication extends Application {
 
     /**
      * Registers the selected workspace with core off the UI thread (it touches the file system), then
-     * shows intake. The result is applied only while {@code root} is still the selected workspace, so
-     * a slow registration cannot override a newer choice. A rejection is returned to the selection
+     * shows intake. The result is applied only if no selection change or newer Continue happened since
+     * {@code token} was issued, so a slow registration cannot override a newer choice (including A, B, A). A rejection is returned to the selection
      * view with its reason.
      */
     private void registerWorkspace(
             TaskDraftService drafts,
             WorkspaceRoot root,
+            long token,
             ApplicationShell shell,
             WorkspaceSelectionView selectionView,
             TaskIntakeView intakeView) {
@@ -78,8 +82,8 @@ public final class ForgeApplication extends Application {
             }
             String message = failure;
             Platform.runLater(() -> {
-                if (selectionView.selectedRoot() == null || !selectionView.selectedRoot().path().equals(root.path())) {
-                    return; // the user has since chosen something else
+                if (token != registration) {
+                    return; // the user has since chosen or confirmed something else
                 }
                 if (message == null) {
                     intakeView.setWorkspace(root.path());

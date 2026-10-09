@@ -50,6 +50,11 @@ public final class TaskDraftService {
         return result;
     }
 
+    /** Drops the specification, keeping the workspace and scope; a no-op when none is held. */
+    public synchronized void clearSpecification() {
+        draft = draft.withoutSpecification();
+    }
+
     /**
      * Validates an explicit whole-workspace scope against the selected workspace and, if accepted,
      * replaces the scope.
