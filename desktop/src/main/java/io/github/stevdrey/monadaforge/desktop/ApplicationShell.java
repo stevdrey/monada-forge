@@ -11,6 +11,7 @@ import javafx.scene.layout.VBox;
 /** Reusable window layout: product header, primary content region and status region. */
 public final class ApplicationShell extends BorderPane {
     private final StackPane content = new StackPane();
+    private final ScrollPane scroll = new ScrollPane(content);
     private final StatusBar status = new StatusBar();
 
     public ApplicationShell(String productName, String tagline) {
@@ -28,7 +29,6 @@ public final class ApplicationShell extends BorderPane {
         header.getStyleClass().add("app-header");
 
         content.getStyleClass().add("app-content");
-        var scroll = new ScrollPane(content);
         scroll.getStyleClass().add("app-content-scroll");
         scroll.setFitToWidth(true);
 
@@ -40,6 +40,8 @@ public final class ApplicationShell extends BorderPane {
     /** Replaces the view hosted in the primary content region. */
     public void setContent(Node view) {
         content.getChildren().setAll(Objects.requireNonNull(view, "view"));
+        scroll.setHvalue(0);
+        scroll.setVvalue(0);
     }
 
     public StatusBar status() {

@@ -1,5 +1,5 @@
-/* Palette and typography. Look-up colors are inherited by every node. */
-.root {
+/* Palette and typography, declared on the shell so it works wherever the shell is placed. */
+.app-shell {
     -forge-surface: #f4f6fa;
     -forge-panel: #ffffff;
     -forge-border: #d5dbe6;
@@ -21,7 +21,6 @@
 .label { -fx-text-fill: -forge-text; }
 
 /* Shell regions */
-.app-shell { -fx-background-color: -forge-surface; }
 
 .app-header {
     -fx-background-color: -forge-panel;

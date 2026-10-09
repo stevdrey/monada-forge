@@ -23,9 +23,15 @@ public enum StatusKind {
         return styleClass;
     }
 
-    /** Removes every status style class from {@code styleClasses} and adds this kind's class. */
+    /** Leaves {@code styleClasses} with this kind's status class and no other status class. */
     void applyTo(List<String> styleClasses) {
-        styleClasses.removeAll(ALL_STYLE_CLASSES);
-        styleClasses.add(styleClass);
+        for (var other : ALL_STYLE_CLASSES) {
+            if (!other.equals(styleClass)) {
+                styleClasses.remove(other);
+            }
+        }
+        if (!styleClasses.contains(styleClass)) {
+            styleClasses.add(styleClass);
+        }
     }
 }

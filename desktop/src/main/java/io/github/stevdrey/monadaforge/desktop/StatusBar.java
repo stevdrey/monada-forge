@@ -16,6 +16,9 @@ public final class StatusBar extends HBox {
         message.setMaxWidth(Double.MAX_VALUE);
         HBox.setHgrow(message, Priority.ALWAYS);
         getChildren().add(message);
+        // Hidden until the first show(): an empty colored strip carries no feedback.
+        setVisible(false);
+        setManaged(false);
     }
 
     /** Shows {@code text} using the style class that corresponds to {@code kind}. */
@@ -23,5 +26,7 @@ public final class StatusBar extends HBox {
         Objects.requireNonNull(kind, "kind");
         message.setText(Objects.requireNonNull(text, "text"));
         kind.applyTo(getStyleClass());
+        setVisible(true);
+        setManaged(true);
     }
 }

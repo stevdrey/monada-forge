@@ -28,7 +28,7 @@ Keep visual presentation in JavaFX CSS stylesheets under `desktop/src/main/resou
 
 ### Application shell style classes
 
-`ApplicationShell` hosts a header (`app-header`, `app-title`, `app-subtitle`), a scrollable content region (`app-content-scroll`, `app-content`) and a status region (`app-status-bar`). `StatusBar.show(StatusKind, String)` switches between `status-info`, `status-success`, `status-warning` and `status-error`. Screens hosted by the shell use `view`, `view-title` and `view-body`. Colors are look-up colors (`-forge-*`) declared on `.root` in `forge.css`.
+`ApplicationShell` hosts a header (`app-header`, `app-title`, `app-subtitle`), a scrollable content region (`app-content-scroll`, `app-content`) and a status region (`app-status-bar`). `StatusBar.show(StatusKind, String)` switches between `status-info`, `status-success`, `status-warning` and `status-error`. Screens hosted by the shell use `view`, `view-title` and `view-body`. Colors are look-up colors (`-forge-*`) declared on `.app-shell` in `forge.css`, so the shell can be placed anywhere in a scene.
 
 ## Verification
 
