@@ -15,7 +15,11 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -126,6 +130,35 @@ class WorkspaceSelectionTest {
         backgroundQueue.remove().run();
         var selected = assertInstanceOf(State.Selected.class, selection.state());
         assertEquals(second.toRealPath(), selected.root().path());
+    }
+
+    @Test
+    void newerSelectionSupersedesAStalledValidation() throws Exception {
+        var stalled = Files.createDirectory(temp.resolve("stalled"));
+        var fresh = Files.createDirectory(temp.resolve("fresh"));
+        var release = new CountDownLatch(1);
+        BlockingQueue<Runnable> uiQueue = new LinkedBlockingQueue<>();
+        var selection = selection(
+                p -> {
+                    if (p.equals(stalled)) {
+                        try {
+                            release.await();
+                        } catch (InterruptedException e) {
+                            throw new IOException(e);
+                        }
+                    }
+                    return WorkspaceRoot.validate(p);
+                },
+                task -> new Thread(task).start(),
+                uiQueue::add);
+        selection.select(stalled);
+        selection.select(fresh);
+        uiQueue.poll(5, TimeUnit.SECONDS).run();
+        var selected = assertInstanceOf(State.Selected.class, selection.state());
+        assertEquals(fresh.toRealPath(), selected.root().path());
+        release.countDown();
+        uiQueue.poll(5, TimeUnit.SECONDS).run(); // the stalled result finally arrives and is dropped
+        assertEquals(selected, selection.state());
     }
 
     @Test

@@ -67,8 +67,7 @@ public final class WorkspaceSelectionView extends VBox {
     }
 
     private void render(WorkspaceSelection.State state) {
-        boolean validating = state instanceof WorkspaceSelection.State.Validating;
-        choose.setDisable(validating);
+        // The chooser stays enabled while validating so a stalled file system can be abandoned.
         proceed.setDisable(!(state instanceof WorkspaceSelection.State.Selected));
         switch (state) {
             case WorkspaceSelection.State.Required required -> {
