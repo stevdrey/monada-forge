@@ -38,4 +38,13 @@ class TaskIntakeMessagesTest {
         assertEquals(StatusKind.ERROR, one.kind());
         assertTrue(one.text().contains("1 problem "));
     }
+
+    @Test
+    void describeAllJoinsMessagesAndIsNullWhenEmpty() {
+        assertEquals(null, TaskIntakeMessages.describeAll(List.of()));
+        var both = TaskIntakeMessages.describeAll(List.of(
+                new Violation(Field.TITLE, Violation.NO_INDEX, Reason.BLANK),
+                new Violation(Field.DESCRIPTION, Violation.NO_INDEX, Reason.BLANK)));
+        assertTrue(both.startsWith("The title") && both.contains("The description"));
+    }
 }

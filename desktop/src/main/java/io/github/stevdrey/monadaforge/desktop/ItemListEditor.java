@@ -5,7 +5,6 @@ import io.github.stevdrey.monadaforge.core.task.TaskSpecificationValidation.Viol
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import javafx.css.PseudoClass;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -72,10 +71,10 @@ final class ItemListEditor extends VBox {
         for (int i = 0; i < rendered.size(); i++) {
             var row = rendered.get(i);
             var problems = form.errors(field, i);
-            show(row.error(), join(problems));
+            FeedbackLabels.show(row.error(), TaskIntakeMessages.describeAll(problems));
             row.input().pseudoClassStateChanged(INVALID, !problems.isEmpty());
         }
-        show(sectionError, join(form.errors(field, Violation.NO_INDEX)));
+        FeedbackLabels.show(sectionError, TaskIntakeMessages.describeAll(form.errors(field, Violation.NO_INDEX)));
     }
 
     private HBox row(int index, String text, int count) {
@@ -87,9 +86,9 @@ final class ItemListEditor extends VBox {
         input.setWrapText(true);
         input.setPrefRowCount(2);
         input.getStyleClass().add("item-input");
+        TabTraversal.install(input);
         input.textProperty().addListener((observable, before, after) -> {
             form.setItem(field, index, after);
-            refreshErrors();
             onChange.run();
         });
         var error = new Label();
@@ -138,18 +137,5 @@ final class ItemListEditor extends VBox {
         if (index >= 0 && index < rendered.size()) {
             rendered.get(index).input().requestFocus();
         }
-    }
-
-    private static String join(List<Violation> problems) {
-        return problems.isEmpty()
-                ? null
-                : problems.stream().map(TaskIntakeMessages::describe).collect(Collectors.joining(" "));
-    }
-
-    static void show(Label label, String text) {
-        boolean visible = text != null;
-        label.setText(visible ? text : "");
-        label.setVisible(visible);
-        label.setManaged(visible);
     }
 }

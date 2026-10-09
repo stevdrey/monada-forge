@@ -3,7 +3,9 @@ package io.github.stevdrey.monadaforge.desktop;
 import io.github.stevdrey.monadaforge.core.task.TaskSpecification;
 import io.github.stevdrey.monadaforge.core.task.TaskSpecificationValidation.Field;
 import io.github.stevdrey.monadaforge.core.task.TaskSpecificationValidation.Violation;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /** Actionable, user-facing text for task intake; it never echoes what the user typed. */
 final class TaskIntakeMessages {
@@ -28,6 +30,13 @@ final class TaskIntakeMessages {
                     + " contains control or direction-changing characters. Remove them"
                     + (item || field == Field.DESCRIPTION ? "." : " (line breaks are not allowed here).");
         };
+    }
+
+    /** One text for all {@code violations}, or {@code null} when there are none. */
+    static String describeAll(List<Violation> violations) {
+        return violations.isEmpty()
+                ? null
+                : violations.stream().map(TaskIntakeMessages::describe).collect(Collectors.joining(" "));
     }
 
     static Status status(TaskIntakeForm.Result result) {

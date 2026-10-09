@@ -114,8 +114,8 @@ final class WorkspaceSelectionView extends VBox {
         // The chooser stays enabled while validating so a stalled file system can be abandoned.
         var presentation = WorkspacePresentation.of(state);
         requirement.setText(presentation.requirementText());
-        show(path, presentation.pathText());
-        show(error, presentation.errorText());
+        FeedbackLabels.show(path, presentation.pathText());
+        FeedbackLabels.show(error, presentation.errorText());
         proceed.setDisable(!presentation.continueEnabled());
         onSelectionChange.run();
         if (state instanceof WorkspaceSelection.State.Selected selected) {
@@ -123,12 +123,5 @@ final class WorkspaceSelectionView extends VBox {
             lastDirectory = selected.root().path();
         }
         publishStatus();
-    }
-
-    private static void show(Label label, String text) {
-        boolean visible = text != null;
-        label.setText(visible ? text : "");
-        label.setVisible(visible);
-        label.setManaged(visible);
     }
 }

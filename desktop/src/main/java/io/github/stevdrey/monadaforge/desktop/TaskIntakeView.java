@@ -6,7 +6,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
@@ -32,11 +31,11 @@ final class TaskIntakeView extends VBox {
     private final ItemListEditor constraints;
     private final ItemListEditor nonGoals;
     private final Label outcome = new Label();
+    private Runnable onChangeWorkspace = () -> {};
     private BiConsumer<StatusKind, String> onStatus = (kind, text) -> {};
 
-    TaskIntakeView(TaskIntakeForm form, Runnable onChangeWorkspace) {
+    TaskIntakeView(TaskIntakeForm form) {
         this.form = Objects.requireNonNull(form, "form");
-        Objects.requireNonNull(onChangeWorkspace, "onChangeWorkspace");
         getStyleClass().addAll("view", "task-form");
 
         var heading = new Label("Describe the task");
@@ -57,6 +56,7 @@ final class TaskIntakeView extends VBox {
         description.setPromptText("Detailed description");
         description.setWrapText(true);
         description.setPrefRowCount(6);
+        TabTraversal.install(description);
         description.setText(form.description());
         description.textProperty().addListener((observable, before, after) -> {
             form.setDescription(after);
@@ -135,6 +135,10 @@ final class TaskIntakeView extends VBox {
         workspace.setText(Objects.requireNonNull(path, "path").toString());
     }
 
+    void setOnChangeWorkspace(Runnable handler) {
+        onChangeWorkspace = Objects.requireNonNull(handler, "handler");
+    }
+
     void setOnStatus(BiConsumer<StatusKind, String> handler) {
         onStatus = Objects.requireNonNull(handler, "handler");
     }
@@ -164,11 +168,7 @@ final class TaskIntakeView extends VBox {
     }
 
     private static void showErrors(Label label, Control input, List<Violation> problems) {
-        ItemListEditor.show(
-                label,
-                problems.isEmpty()
-                        ? null
-                        : problems.stream().map(TaskIntakeMessages::describe).collect(Collectors.joining(" ")));
+        FeedbackLabels.show(label, TaskIntakeMessages.describeAll(problems));
         input.pseudoClassStateChanged(ItemListEditor.INVALID, !problems.isEmpty());
     }
 }

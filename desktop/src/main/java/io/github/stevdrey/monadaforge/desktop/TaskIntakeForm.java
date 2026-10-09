@@ -44,10 +44,6 @@ final class TaskIntakeForm {
     private final Runnable onInvalidated;
     private Result result = new Result.NotValidated();
 
-    TaskIntakeForm(Function<TaskSpecificationDraft, TaskSpecificationValidation> validator) {
-        this(validator, () -> {});
-    }
-
     /**
      * @param onInvalidated run when an accepted result stops matching the form, so whoever stored the
      *     accepted specification can drop it
