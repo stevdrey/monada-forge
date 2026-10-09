@@ -58,10 +58,11 @@ public final class ForgeApplication extends Application {
     }
 
     /**
-     * Registers the selected workspace with core off the UI thread (it touches the file system), then
-     * shows intake. The result is applied only if no selection change or newer Continue happened since
-     * {@code token} was issued, so a slow registration cannot override a newer choice (including A, B, A). A rejection is returned to the selection
-     * view with its reason.
+     * Revalidates the selected workspace off the UI thread (it touches the file system) and then
+     * shows intake. Revalidation changes no shared state: the freshly validated root is applied to
+     * the draft and displayed on the UI thread, and only if no selection change or newer Continue
+     * happened since {@code token} was issued. A slow, obsolete request therefore cannot override a
+     * newer choice (including A, B, A). A rejection is returned to the selection view with its reason.
      */
     private void registerWorkspace(
             TaskDraftService drafts,
@@ -71,22 +72,26 @@ public final class ForgeApplication extends Application {
             WorkspaceSelectionView selectionView,
             TaskIntakeView intakeView) {
         validation.execute(() -> {
-            String failure;
+            WorkspaceRoot fresh = null;
+            String failure = null;
             try {
-                failure = switch (drafts.selectWorkspace(root.path())) {
-                    case WorkspaceRootValidation.Accepted _ -> null;
-                    case WorkspaceRootValidation.Rejected rejected -> WorkspaceMessages.describe(rejected.reason());
-                };
+                switch (WorkspaceRoot.validate(root.path())) {
+                    case WorkspaceRootValidation.Accepted accepted -> fresh = accepted.root();
+                    case WorkspaceRootValidation.Rejected rejected ->
+                            failure = WorkspaceMessages.describe(rejected.reason());
+                }
             } catch (IOException | RuntimeException e) {
                 failure = WorkspaceMessages.UNEXPECTED_FAILURE;
             }
+            WorkspaceRoot validated = fresh;
             String message = failure;
             Platform.runLater(() -> {
                 if (token != registration) {
                     return; // the user has since chosen or confirmed something else
                 }
-                if (message == null) {
-                    intakeView.setWorkspace(root.path());
+                if (validated != null) {
+                    drafts.selectWorkspace(validated);
+                    intakeView.setWorkspace(validated.path());
                     shell.setContent(intakeView);
                     intakeView.publishStatus();
                 } else {
