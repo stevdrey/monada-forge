@@ -149,16 +149,24 @@ class WorkspaceSelectionTest {
                     }
                     return WorkspaceRoot.validate(p);
                 },
-                task -> new Thread(task).start(),
+                task -> {
+                    var thread = new Thread(task);
+                    thread.setDaemon(true);
+                    thread.start();
+                },
                 uiQueue::add);
-        selection.select(stalled);
-        selection.select(fresh);
-        uiQueue.poll(5, TimeUnit.SECONDS).run();
-        var selected = assertInstanceOf(State.Selected.class, selection.state());
-        assertEquals(fresh.toRealPath(), selected.root().path());
-        release.countDown();
-        uiQueue.poll(5, TimeUnit.SECONDS).run(); // the stalled result finally arrives and is dropped
-        assertEquals(selected, selection.state());
+        try {
+            selection.select(stalled);
+            selection.select(fresh);
+            uiQueue.poll(5, TimeUnit.SECONDS).run();
+            var selected = assertInstanceOf(State.Selected.class, selection.state());
+            assertEquals(fresh.toRealPath(), selected.root().path());
+            release.countDown();
+            uiQueue.poll(5, TimeUnit.SECONDS).run(); // the stalled result finally arrives and is dropped
+            assertEquals(selected, selection.state());
+        } finally {
+            release.countDown();
+        }
     }
 
     @Test

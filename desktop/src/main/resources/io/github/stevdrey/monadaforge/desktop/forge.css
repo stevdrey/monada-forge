@@ -14,7 +14,7 @@
     -forge-error-bg: #fbe3e3;
     -forge-error-text: #8a1c1c;
 
-    -forge-focus: #38b6ff;
+    -forge-focus: #0e7490;
     -forge-accent: #2f5fd0;
     -forge-accent-hover: #2850b4;
     -forge-accent-pressed: #1f4094;
@@ -100,11 +100,15 @@
 }
 .button:hover { -fx-background-color: -forge-surface; }
 .button:pressed { -fx-background-color: -forge-border; }
-/* Focus is a 3px ring in a lighter sky blue than the accent; layered backgrounds keep the button size. */
+/*
+ * Focus is a two-tone ring: 3px teal, 2px white gap, then the fill. No single color reaches 3:1
+ * against both white and the accent fill, so the ring only ever touches white (5.4:1). Layered
+ * backgrounds keep the button size unchanged.
+ */
 .button:focused {
-    -fx-background-color: -forge-focus, -forge-panel;
-    -fx-background-insets: 0, 3;
-    -fx-background-radius: 8px, 5px;
+    -fx-background-color: -forge-focus, -forge-panel, -forge-panel;
+    -fx-background-insets: 0, 3, 5;
+    -fx-background-radius: 8px, 5px, 3px;
     -fx-border-color: transparent;
 }
 .primary-button {
@@ -115,12 +119,12 @@
 .primary-button:hover { -fx-background-color: -forge-accent-hover; -fx-border-color: -forge-accent-hover; }
 .primary-button:pressed { -fx-background-color: -forge-accent-pressed; }
 .primary-button:focused {
-    -fx-background-color: -forge-focus, -forge-accent;
-    -fx-background-insets: 0, 3;
-    -fx-background-radius: 8px, 5px;
+    -fx-background-color: -forge-focus, -forge-panel, -forge-accent;
+    -fx-background-insets: 0, 3, 5;
+    -fx-background-radius: 8px, 5px, 3px;
 }
-.primary-button:focused:hover { -fx-background-color: -forge-focus, -forge-accent-hover; }
-.primary-button:focused:pressed { -fx-background-color: -forge-focus, -forge-accent-pressed; }
+.primary-button:focused:hover { -fx-background-color: -forge-focus, -forge-panel, -forge-accent-hover; }
+.primary-button:focused:pressed { -fx-background-color: -forge-focus, -forge-panel, -forge-accent-pressed; }
 .button:disabled {
     -fx-background-color: -forge-surface;
     -fx-border-color: -forge-border;
