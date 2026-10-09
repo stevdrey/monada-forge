@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 
@@ -35,7 +36,10 @@ public final class WorkspaceSelectionView extends VBox {
         path.setWrapText(true);
         error.getStyleClass().add("field-error");
         error.setWrapText(true);
+        choose.getStyleClass().add("secondary-button");
         proceed.getStyleClass().add("primary-button");
+        var actions = new HBox(choose, proceed);
+        actions.getStyleClass().add("action-row");
 
         choose.setOnAction(event -> chooseDirectory());
         proceed.setOnAction(event -> {
@@ -44,7 +48,7 @@ public final class WorkspaceSelectionView extends VBox {
             }
         });
 
-        getChildren().addAll(heading, requirement, path, error, choose, proceed);
+        getChildren().addAll(heading, requirement, path, error, actions);
         render(selection.state());
     }
 

@@ -14,6 +14,10 @@
     -forge-error-bg: #fbe3e3;
     -forge-error-text: #8a1c1c;
 
+    -forge-accent: #2f5fd0;
+    -forge-accent-hover: #2850b4;
+    -forge-accent-pressed: #1f4094;
+
     -fx-font-family: "System";
     -fx-font-size: 15px;
     -fx-background-color: -forge-surface;
@@ -80,4 +84,33 @@
     -fx-padding: 8px 12px;
 }
 .field-error { -fx-text-fill: -forge-error-text; }
-.primary-button:disabled { -fx-opacity: 0.5; }
+
+/* Buttons */
+.action-row { -fx-spacing: 12px; -fx-alignment: center-left; }
+.button {
+    -fx-background-color: -forge-panel;
+    -fx-background-radius: 6px;
+    -fx-border-color: -forge-border;
+    -fx-border-radius: 6px;
+    -fx-text-fill: -forge-text;
+    -fx-font-weight: 600;
+    -fx-padding: 8px 18px;
+    -fx-cursor: hand;
+}
+.button:hover { -fx-background-color: -forge-surface; }
+.button:pressed { -fx-background-color: -forge-border; }
+.button:focused { -fx-border-color: -forge-accent; }
+.primary-button {
+    -fx-background-color: -forge-accent;
+    -fx-border-color: -forge-accent;
+    -fx-text-fill: white;
+}
+.primary-button:hover { -fx-background-color: -forge-accent-hover; -fx-border-color: -forge-accent-hover; }
+.primary-button:pressed { -fx-background-color: -forge-accent-pressed; }
+.button:disabled {
+    -fx-background-color: -forge-surface;
+    -fx-border-color: -forge-border;
+    -fx-text-fill: -forge-text-muted;
+    -fx-opacity: 1;
+    -fx-cursor: default;
+}
