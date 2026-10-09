@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
 
 /**
@@ -15,6 +16,7 @@ import java.util.function.Consumer;
  * delivered to the listener through the UI executor. All methods must be called on the UI thread.
  */
 final class WorkspaceSelection {
+    private static final System.Logger LOG = System.getLogger(WorkspaceSelection.class.getName());
 
     /** Throwing validator so unexpected I/O failures stay distinguishable from invalid input. */
     @FunctionalInterface
@@ -58,14 +60,20 @@ final class WorkspaceSelection {
         }
         long mine = ++generation;
         publish(new State.Validating(candidate));
-        background.execute(() -> {
-            State result = validate(candidate);
-            ui.execute(() -> {
-                if (mine == generation) {
-                    publish(result);
-                }
+        try {
+            background.execute(() -> {
+                State result = validate(candidate);
+                ui.execute(() -> {
+                    if (mine == generation) {
+                        publish(result);
+                    }
+                });
             });
-        });
+        } catch (RejectedExecutionException e) {
+            // E.g. the executor was shut down: never leave the view waiting for a result.
+            LOG.log(System.Logger.Level.WARNING, "Workspace validation was rejected", e);
+            publish(new State.Invalid(candidate, WorkspaceMessages.UNEXPECTED_FAILURE));
+        }
     }
 
     private State validate(Path candidate) {
@@ -76,6 +84,7 @@ final class WorkspaceSelection {
                         new State.Invalid(candidate, WorkspaceMessages.describe(rejected.reason()));
             };
         } catch (IOException | RuntimeException e) {
+            LOG.log(System.Logger.Level.WARNING, "Workspace validation failed unexpectedly", e);
             return new State.Invalid(candidate, WorkspaceMessages.UNEXPECTED_FAILURE);
         }
     }

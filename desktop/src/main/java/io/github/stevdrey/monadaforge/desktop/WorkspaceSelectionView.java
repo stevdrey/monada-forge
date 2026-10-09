@@ -4,6 +4,8 @@ import io.github.stevdrey.monadaforge.core.workspace.WorkspaceRoot;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.concurrent.Executor;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -12,7 +14,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 
 /** Lets the user pick the local workspace and shows validation feedback before continuing. */
-public final class WorkspaceSelectionView extends VBox {
+final class WorkspaceSelectionView extends VBox {
     private final WorkspaceSelection selection;
     private final Label requirement = new Label();
     private final Label path = new Label();
@@ -21,9 +23,9 @@ public final class WorkspaceSelectionView extends VBox {
     private final Button proceed = new Button("Continue");
     private Path lastDirectory;
     private Consumer<WorkspaceRoot> onContinue = root -> {};
+    private BiConsumer<StatusKind, String> onStatus = (kind, text) -> {};
 
-    WorkspaceSelectionView(WorkspaceSelection.Validator validator,
-            java.util.concurrent.Executor background, java.util.concurrent.Executor ui) {
+    WorkspaceSelectionView(WorkspaceSelection.Validator validator, Executor background, Executor ui) {
         getStyleClass().add("view");
         selection = new WorkspaceSelection(
                 Objects.requireNonNull(validator, "validator"), background, ui, this::render);
@@ -36,7 +38,6 @@ public final class WorkspaceSelectionView extends VBox {
         path.setWrapText(true);
         error.getStyleClass().add("field-error");
         error.setWrapText(true);
-        choose.getStyleClass().add("secondary-button");
         proceed.getStyleClass().add("primary-button");
         var actions = new HBox(choose, proceed);
         actions.getStyleClass().add("action-row");
@@ -52,8 +53,19 @@ public final class WorkspaceSelectionView extends VBox {
         render(selection.state());
     }
 
-    public void setOnContinue(Consumer<WorkspaceRoot> handler) {
+    void setOnContinue(Consumer<WorkspaceRoot> handler) {
         onContinue = Objects.requireNonNull(handler, "handler");
+    }
+
+    /** Receives the status the shell should show for the current selection state. */
+    void setOnStatus(BiConsumer<StatusKind, String> handler) {
+        onStatus = Objects.requireNonNull(handler, "handler");
+    }
+
+    /** Re-emits the status for the current state, e.g. when this view is shown again. */
+    void publishStatus() {
+        var presentation = WorkspacePresentation.of(selection.state());
+        onStatus.accept(presentation.statusKind(), presentation.statusText());
     }
 
     private void chooseDirectory() {
@@ -71,32 +83,16 @@ public final class WorkspaceSelectionView extends VBox {
 
     private void render(WorkspaceSelection.State state) {
         // The chooser stays enabled while validating so a stalled file system can be abandoned.
-        proceed.setDisable(!(state instanceof WorkspaceSelection.State.Selected));
-        switch (state) {
-            case WorkspaceSelection.State.Required required -> {
-                requirement.setText("A workspace is required before you can continue. "
-                        + "Choose the local folder Monada Forge will work in.");
-                show(path, null);
-                show(error, null);
-            }
-            case WorkspaceSelection.State.Validating validatingState -> {
-                requirement.setText("Checking the selected folder…");
-                show(path, null);
-                show(error, null);
-            }
-            case WorkspaceSelection.State.Selected selected -> {
-                requirement.setText("Workspace selected. You can choose a different folder at any time.");
-                lastDirectory = selected.root().path();
-                show(path, selected.root().path().toString());
-                show(error, null);
-            }
-            case WorkspaceSelection.State.Invalid invalid -> {
-                requirement.setText("A valid workspace is required before you can continue.");
-                lastDirectory = null;
-                show(path, invalid.requested().toString());
-                show(error, invalid.message());
-            }
+        var presentation = WorkspacePresentation.of(state);
+        requirement.setText(presentation.requirementText());
+        show(path, presentation.pathText());
+        show(error, presentation.errorText());
+        proceed.setDisable(!presentation.continueEnabled());
+        if (state instanceof WorkspaceSelection.State.Selected selected) {
+            // Staleness of this directory is handled by WorkspaceChooser.pick, so Invalid keeps it.
+            lastDirectory = selected.root().path();
         }
+        publishStatus();
     }
 
     private static void show(Label label, String text) {

@@ -103,7 +103,8 @@
 /*
  * Focus is a two-tone ring: 3px teal, 2px white gap, then the fill. No single color reaches 3:1
  * against both white and the accent fill, so the ring only ever touches white (5.4:1). Layered
- * backgrounds keep the button size unchanged.
+ * backgrounds keep the button size unchanged. JavaFX has no :focus-visible, so the ring also shows
+ * after a mouse click.
  */
 .button:focused {
     -fx-background-color: -forge-focus, -forge-panel, -forge-panel;
@@ -111,6 +112,8 @@
     -fx-background-radius: 8px, 5px, 3px;
     -fx-border-color: transparent;
 }
+.button:focused:hover { -fx-background-color: -forge-focus, -forge-panel, -forge-surface; }
+.button:focused:pressed { -fx-background-color: -forge-focus, -forge-panel, -forge-border; }
 .primary-button {
     -fx-background-color: -forge-accent;
     -fx-border-color: -forge-accent;

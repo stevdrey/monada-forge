@@ -19,6 +19,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -91,6 +92,22 @@ class WorkspaceSelectionTest {
     @Test
     void unexpectedIoFailureIsInvalidWithoutLeakingDetails() {
         var selection = selection(p -> { throw new IOException("secret detail"); }, direct, direct);
+        selection.select(temp);
+        var invalid = assertInstanceOf(State.Invalid.class, selection.state());
+        assertEquals(WorkspaceMessages.UNEXPECTED_FAILURE, invalid.message());
+    }
+
+    @Test
+    void unexpectedRuntimeFailureIsInvalidWithTheGenericMessage() {
+        var selection = selection(p -> { throw new IllegalStateException("bug"); }, direct, direct);
+        selection.select(temp);
+        var invalid = assertInstanceOf(State.Invalid.class, selection.state());
+        assertEquals(WorkspaceMessages.UNEXPECTED_FAILURE, invalid.message());
+    }
+
+    @Test
+    void rejectedExecutionDoesNotLeaveTheSelectionValidating() {
+        var selection = selection(WorkspaceRoot::validate, task -> { throw new RejectedExecutionException(); }, direct);
         selection.select(temp);
         var invalid = assertInstanceOf(State.Invalid.class, selection.state());
         assertEquals(WorkspaceMessages.UNEXPECTED_FAILURE, invalid.message());

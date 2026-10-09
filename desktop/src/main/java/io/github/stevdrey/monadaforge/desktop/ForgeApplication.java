@@ -21,12 +21,15 @@ public final class ForgeApplication extends Application {
                 Thread.ofVirtual().name("workspace-validation-", 0).factory());
         var shell = new ApplicationShell(PRODUCT_NAME, "A workspace for agent-assisted software delivery.");
         var selectionView = new WorkspaceSelectionView(WorkspaceRoot::validate, validation, Platform::runLater);
+        selectionView.setOnStatus(shell.status()::show);
         selectionView.setOnContinue(root -> {
-            shell.setContent(new WelcomeView());
-            shell.status().show(StatusKind.SUCCESS, "Workspace: " + root.path());
+            shell.setContent(new WelcomeView(root.path(), () -> {
+                shell.setContent(selectionView);
+                selectionView.publishStatus();
+            }));
         });
         shell.setContent(selectionView);
-        shell.status().show(StatusKind.INFO, "Select a workspace to begin");
+        selectionView.publishStatus();
 
         var scene = new Scene(shell, 880, 560);
 
