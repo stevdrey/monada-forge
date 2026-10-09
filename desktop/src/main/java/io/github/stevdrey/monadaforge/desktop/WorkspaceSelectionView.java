@@ -57,12 +57,15 @@ public final class WorkspaceSelectionView extends VBox {
     }
 
     private void chooseDirectory() {
-        var chooser = new DirectoryChooser();
-        chooser.setTitle("Choose workspace");
-        if (lastDirectory != null) {
-            chooser.setInitialDirectory(lastDirectory.toFile());
-        }
-        File picked = chooser.showDialog(getScene() == null ? null : getScene().getWindow());
+        var owner = getScene() == null ? null : getScene().getWindow();
+        File picked = WorkspaceChooser.pick(lastDirectory, initial -> {
+            var chooser = new DirectoryChooser();
+            chooser.setTitle("Choose workspace");
+            if (initial != null) {
+                chooser.setInitialDirectory(initial);
+            }
+            return chooser.showDialog(owner);
+        });
         selection.select(picked == null ? null : picked.toPath());
     }
 
@@ -89,6 +92,7 @@ public final class WorkspaceSelectionView extends VBox {
             }
             case WorkspaceSelection.State.Invalid invalid -> {
                 requirement.setText("A valid workspace is required before you can continue.");
+                lastDirectory = null;
                 show(path, invalid.requested().toString());
                 show(error, invalid.message());
             }

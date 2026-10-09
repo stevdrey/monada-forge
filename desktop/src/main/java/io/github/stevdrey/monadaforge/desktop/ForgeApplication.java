@@ -12,16 +12,13 @@ import javafx.stage.Stage;
 public final class ForgeApplication extends Application {
     static final String PRODUCT_NAME = "Monada Forge";
 
-    // One thread per in-flight validation: a newer selection must not queue behind a stalled one.
+    // One cheap virtual thread per validation: a newer selection must not queue behind a stalled one.
     private ExecutorService validation;
 
     @Override
     public void start(Stage stage) {
-        validation = Executors.newCachedThreadPool(task -> {
-            var thread = new Thread(task, "workspace-validation");
-            thread.setDaemon(true);
-            return thread;
-        });
+        validation = Executors.newThreadPerTaskExecutor(
+                Thread.ofVirtual().name("workspace-validation-", 0).factory());
         var shell = new ApplicationShell(PRODUCT_NAME, "A workspace for agent-assisted software delivery.");
         var selectionView = new WorkspaceSelectionView(WorkspaceRoot::validate, validation, Platform::runLater);
         selectionView.setOnContinue(root -> {
