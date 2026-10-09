@@ -88,6 +88,11 @@ public final class TaskDraftService {
         return apply(TaskScope.validatePaths(requireWorkspace(), allowed, excluded));
     }
 
+    /** Drops the scope back to {@linkplain TaskScope#unset() unset}, keeping workspace and specification; a no-op when unset. */
+    public synchronized void clearScope() {
+        draft = draft.withScope(TaskScope.unset());
+    }
+
     /** Discards the whole draft, returning to the empty, incomplete state. */
     public synchronized void clear() {
         draft = TaskDraft.empty();

@@ -161,6 +161,21 @@ class TaskDraftServiceTest {
     }
 
     @Test
+    void clearingTheScopeKeepsWorkspaceAndSpecificationAndIsIdempotent() throws IOException {
+        completeDraft();
+        TaskDraft before = service.current();
+
+        service.clearScope();
+        service.clearScope();
+
+        TaskDraft after = service.current();
+        assertInstanceOf(TaskScope.Unset.class, after.scope());
+        assertEquals(before.workspace(), after.workspace());
+        assertEquals(before.specification(), after.specification());
+        assertEquals(List.of(Missing.SCOPE), after.missing());
+    }
+
+    @Test
     void applyingAValidatedRootBehavesLikeSelectingItsPath() throws IOException {
         completeDraft();
         TaskDraft before = service.current();
