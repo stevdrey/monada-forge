@@ -127,6 +127,7 @@ final class TaskScopeForm {
         if (!value.equals(items.get(index))) {
             items.set(index, value);
             errors.removeIf(violation -> violation.field() == field && violation.index() == index);
+            dropContradictions();
             invalidate();
         }
     }
@@ -208,6 +209,10 @@ final class TaskScopeForm {
         }
         errors.clear();
         workspaceChanged = false;
+        if (!(outcome instanceof TaskScopeValidation.Accepted)) {
+            // Core leaves an earlier accepted scope in the draft when it rejects new input.
+            onInvalidated.run();
+        }
         result = switch (outcome) {
             case TaskScopeValidation.Accepted accepted -> new Result.Valid(accepted.scope());
             case TaskScopeValidation.Rejected rejected -> {
@@ -234,7 +239,13 @@ final class TaskScopeForm {
 
     private void restructured(Field field) {
         errors.removeIf(violation -> violation.field() == field);
+        dropContradictions();
         invalidate();
+    }
+
+    /** A contradiction between the lists is reported on one of them but caused by either, so any edit clears it. */
+    private void dropContradictions() {
+        errors.removeIf(violation -> violation.reason() == TaskScopeValidation.Reason.ALLOWED_AND_EXCLUDED_CONTRADICT);
     }
 
     private void invalidate() {

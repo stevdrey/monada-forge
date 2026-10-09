@@ -176,6 +176,19 @@ class TaskDraftServiceTest {
     }
 
     @Test
+    void scopeValidatedAgainstAReplacedWorkspaceIsNotApplied() throws IOException {
+        selectWorkspace(ws);
+        var staleRoot = service.current().workspace().orElseThrow();
+        var stale = TaskScope.validatePaths(staleRoot, List.of("src"), null);
+        Path other = Files.createDirectory(temp.resolve("other"));
+        selectWorkspace(other);
+
+        assertThrows(IllegalStateException.class, () -> service.applyIfCurrent(staleRoot, stale));
+
+        assertInstanceOf(TaskScope.Unset.class, service.current().scope());
+    }
+
+    @Test
     void applyingAValidatedRootBehavesLikeSelectingItsPath() throws IOException {
         completeDraft();
         TaskDraft before = service.current();

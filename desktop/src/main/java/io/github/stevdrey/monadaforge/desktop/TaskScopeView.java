@@ -139,8 +139,14 @@ final class TaskScopeView extends VBox {
         onStatus = Objects.requireNonNull(handler, "handler");
     }
 
-    /** Re-emits the status for the current state, e.g. when this view is shown again. */
+    /**
+     * Emits the status for the current state, e.g. when this view is shown again. A view that is not
+     * displayed stays silent, so a late validation result cannot overwrite another view's status.
+     */
     void publishStatus() {
+        if (getParent() == null) {
+            return;
+        }
         var status = TaskScopeMessages.status(form.result(), form.needsRevalidation());
         onStatus.accept(status.kind(), status.text());
     }

@@ -232,4 +232,62 @@ class TaskScopeFormTest {
         assertFalse(form.needsRevalidation());
         assertInstanceOf(TaskScope.Unset.class, service.current().scope());
     }
+
+    @Test
+    void editingEitherListClearsAContradictionReportedOnTheOther() {
+        allow("src");
+        form.addItem(Field.EXCLUDED);
+        form.setItem(Field.EXCLUDED, 0, "src");
+        assertEquals(
+                List.of(new Violation(Field.ALLOWED, 0, Reason.ALLOWED_AND_EXCLUDED_CONTRADICT)), invalid());
+
+        form.setItem(Field.EXCLUDED, 0, "src/main");
+
+        assertTrue(form.errors(Field.ALLOWED, 0).isEmpty());
+        assertInstanceOf(TaskScopeForm.Result.Valid.class, form.submit());
+    }
+
+    @Test
+    void structuralChangeClearsAContradictionOnTheOtherList() {
+        allow("src");
+        form.addItem(Field.EXCLUDED);
+        form.setItem(Field.EXCLUDED, 0, "src");
+        invalid();
+
+        form.removeItem(Field.EXCLUDED, 0);
+
+        assertTrue(form.errors().isEmpty());
+    }
+
+    @Test
+    void revalidationRejectedLaterWithdrawsThePreviouslyAcceptedScope() throws IOException {
+        allow("docs");
+        assertInstanceOf(TaskScopeForm.Result.Valid.class, form.submit());
+        assertInstanceOf(TaskScope.Paths.class, service.current().scope());
+        Files.delete(ws.resolve("docs"));
+
+        assertEquals(List.of(new Violation(Field.ALLOWED, 0, Reason.NOT_FOUND)), invalid());
+
+        assertInstanceOf(TaskScope.Unset.class, service.current().scope());
+    }
+
+    @Test
+    void failedRevalidationWithdrawsThePreviouslyAcceptedScope() {
+        var withdrawn = new boolean[1];
+        var flaky = new TaskScopeForm(
+                (mode, allowed, excluded) -> {
+                    if (withdrawn[0]) {
+                        throw new IOException("boom");
+                    }
+                    return service.selectEntireWorkspace(excluded);
+                },
+                service::clearScope);
+        flaky.setMode(TaskScopeForm.Mode.ENTIRE_WORKSPACE);
+        assertInstanceOf(TaskScopeForm.Result.Valid.class, flaky.submit());
+        withdrawn[0] = true;
+
+        assertInstanceOf(TaskScopeForm.Result.Failed.class, flaky.submit());
+
+        assertInstanceOf(TaskScope.Unset.class, service.current().scope());
+    }
 }

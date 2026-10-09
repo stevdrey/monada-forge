@@ -14,7 +14,9 @@ import java.util.Objects;
  * contract's validation result unchanged, so callers keep the full violation detail. Only accepted
  * input replaces state; a rejected input leaves the draft exactly as it was. Nothing is persisted,
  * and no file is created or modified. Changes are serialized; reads never wait for them, because a
- * snapshot is immutable and always consistent.
+ * snapshot is immutable and always consistent. Scope validation touches the file system, so it runs
+ * outside that serialization against the workspace snapshot and is applied afterwards only if that
+ * workspace is still the selected one; a stalled file system therefore never blocks other changes.
  */
 public final class TaskDraftService {
 
@@ -69,23 +71,24 @@ public final class TaskDraftService {
      * Validates an explicit whole-workspace scope against the selected workspace and, if accepted,
      * replaces the scope.
      *
-     * @throws IllegalStateException if no workspace has been selected
+     * @throws IllegalStateException if no workspace has been selected, or it changed while validating
      * @throws IOException on unexpected I/O failures, as opposed to invalid or escaping input
      */
-    public synchronized TaskScopeValidation selectEntireWorkspace(List<String> excluded) throws IOException {
-        return apply(TaskScope.validateEntireWorkspace(requireWorkspace(), excluded));
+    public TaskScopeValidation selectEntireWorkspace(List<String> excluded) throws IOException {
+        WorkspaceRoot root = requireWorkspace();
+        return applyIfCurrent(root, TaskScope.validateEntireWorkspace(root, excluded));
     }
 
     /**
      * Validates a scope limited to {@code allowed} areas against the selected workspace and, if
      * accepted, replaces the scope.
      *
-     * @throws IllegalStateException if no workspace has been selected
+     * @throws IllegalStateException if no workspace has been selected, or it changed while validating
      * @throws IOException on unexpected I/O failures, as opposed to invalid or escaping input
      */
-    public synchronized TaskScopeValidation selectPaths(List<String> allowed, List<String> excluded)
-            throws IOException {
-        return apply(TaskScope.validatePaths(requireWorkspace(), allowed, excluded));
+    public TaskScopeValidation selectPaths(List<String> allowed, List<String> excluded) throws IOException {
+        WorkspaceRoot root = requireWorkspace();
+        return applyIfCurrent(root, TaskScope.validatePaths(root, allowed, excluded));
     }
 
     /** Drops the scope back to {@linkplain TaskScope#unset() unset}, keeping workspace and specification; a no-op when unset. */
@@ -103,7 +106,11 @@ public final class TaskDraftService {
                 .orElseThrow(() -> new IllegalStateException("A workspace must be selected before a scope"));
     }
 
-    private TaskScopeValidation apply(TaskScopeValidation result) {
+    /** Applies {@code result}, validated against {@code root}, only while {@code root} is still selected. */
+    synchronized TaskScopeValidation applyIfCurrent(WorkspaceRoot root, TaskScopeValidation result) {
+        if (!root.equals(draft.workspace().orElse(null))) {
+            throw new IllegalStateException("The workspace changed during validation");
+        }
         if (result instanceof TaskScopeValidation.Accepted accepted) {
             draft = draft.withScope(accepted.scope());
         }
