@@ -109,8 +109,7 @@ final class TaskIntakeForm {
         String value = Objects.requireNonNull(text, "text");
         if (!value.equals(items.get(index))) {
             items.set(index, value);
-            edited(field, index);
-            errors.removeIf(violation -> violation.field() == field && violation.index() == Violation.NO_INDEX);
+            edited(field, index); // whole-list errors (such as too many items) stay until the list changes
         }
     }
 

@@ -39,11 +39,9 @@ public final class ForgeApplication extends Application {
         var intakeView = intake[0];
         intakeView.setOnStatus(shell.status()::show);
         selectionView.setOnContinue(root -> {
-            if (!selectionView.keepTask()) {
-                intakeView.reset();
-                drafts.clear();
-            }
-            registerWorkspace(drafts, root, ++registration, shell, selectionView, intakeView);
+            // Discarding waits for a successful registration, so a rejected workspace loses nothing.
+            registerWorkspace(
+                    drafts, root, ++registration, !selectionView.keepTask(), shell, selectionView, intakeView);
         });
         shell.setContent(selectionView);
         selectionView.publishStatus();
@@ -61,13 +59,14 @@ public final class ForgeApplication extends Application {
      * Revalidates the selected workspace off the UI thread (it touches the file system) and then
      * shows intake. Revalidation changes no shared state: the freshly validated root is applied to
      * the draft and displayed on the UI thread, and only if no selection change or newer Continue
-     * happened since {@code token} was issued. A slow, obsolete request therefore cannot override a
+     * happened since {@code token} was issued; the task is discarded (when {@code discardTask}) at that same point. A slow, obsolete request therefore cannot override a
      * newer choice (including A, B, A). A rejection is returned to the selection view with its reason.
      */
     private void registerWorkspace(
             TaskDraftService drafts,
             WorkspaceRoot root,
             long token,
+            boolean discardTask,
             ApplicationShell shell,
             WorkspaceSelectionView selectionView,
             TaskIntakeView intakeView) {
@@ -90,6 +89,10 @@ public final class ForgeApplication extends Application {
                     return; // the user has since chosen or confirmed something else
                 }
                 if (validated != null) {
+                    if (discardTask) {
+                        intakeView.reset();
+                        drafts.clear();
+                    }
                     drafts.selectWorkspace(validated);
                     intakeView.setWorkspace(validated.path());
                     shell.setContent(intakeView);

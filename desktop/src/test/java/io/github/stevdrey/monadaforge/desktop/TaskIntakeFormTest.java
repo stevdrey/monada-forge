@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.stevdrey.monadaforge.core.task.TaskDraftService;
+import io.github.stevdrey.monadaforge.core.task.TaskSpecification;
 import io.github.stevdrey.monadaforge.core.task.TaskSpecificationValidation.Field;
 import io.github.stevdrey.monadaforge.core.task.TaskSpecificationValidation.Reason;
 import io.github.stevdrey.monadaforge.core.task.TaskSpecificationValidation.Violation;
@@ -180,6 +181,24 @@ class TaskIntakeFormTest {
         form.clear();
 
         assertTrue(service.current().specification().isEmpty());
+    }
+
+    @Test
+    void tooManyItemsErrorSurvivesTextEditsUntilTheListChanges() {
+        fillValid();
+        for (int i = 0; i < TaskSpecification.MAX_ITEMS; i++) {
+            form.addItem(Field.ACCEPTANCE_CRITERIA);
+            form.setItem(Field.ACCEPTANCE_CRITERIA, i + 1, "item " + i);
+        }
+        form.submit();
+        var tooMany = new Violation(Field.ACCEPTANCE_CRITERIA, Violation.NO_INDEX, Reason.TOO_MANY);
+        assertTrue(form.errors().contains(tooMany));
+
+        form.setItem(Field.ACCEPTANCE_CRITERIA, 3, "edited");
+        assertTrue(form.errors().contains(tooMany));
+
+        form.removeItem(Field.ACCEPTANCE_CRITERIA, 3);
+        assertFalse(form.errors().contains(tooMany));
     }
 
     @Test
