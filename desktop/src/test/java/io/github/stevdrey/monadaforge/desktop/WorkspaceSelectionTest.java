@@ -42,7 +42,12 @@ class WorkspaceSelectionTest {
     @Test
     void validDirectoryIsSelectedWithCanonicalPath() throws IOException {
         var real = Files.createDirectory(temp.resolve("real"));
-        var link = Files.createSymbolicLink(temp.resolve("link"), real);
+        var link = temp.resolve("link");
+        try {
+            Files.createSymbolicLink(link, real);
+        } catch (UnsupportedOperationException | IOException e) {
+            assumeTrue(false, "symbolic links not supported here");
+        }
         var selection = selection();
         selection.select(link);
         var selected = assertInstanceOf(State.Selected.class, selection.state());

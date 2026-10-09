@@ -27,7 +27,7 @@ class StylesheetTest {
     @Test
     void definesWorkspaceSelectionClasses() throws IOException {
         var css = stylesheet();
-        for (var styleClass : new String[] {".workspace-path", ".field-error", ".primary-button"}) {
+        for (var styleClass : new String[] {".workspace-path", ".field-error", ".primary-button", ".primary-button:focused"}) {
             assertTrue(css.contains(styleClass), "missing " + styleClass);
         }
     }
