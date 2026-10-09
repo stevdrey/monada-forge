@@ -69,3 +69,15 @@
 .status-warning .status-message { -fx-text-fill: -forge-warning-text; }
 .status-error { -fx-background-color: -forge-error-bg; }
 .status-error .status-message { -fx-text-fill: -forge-error-text; }
+
+/* Workspace selection */
+.workspace-path {
+    -fx-font-family: "Monospaced";
+    -fx-background-color: -forge-surface;
+    -fx-border-color: -forge-border;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-padding: 8px 12px;
+}
+.field-error { -fx-text-fill: -forge-error-text; }
+.primary-button:disabled { -fx-opacity: 0.5; }

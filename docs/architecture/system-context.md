@@ -7,7 +7,7 @@ The product is one desktop application built from two Gradle subprojects and two
 | Module | Owns | Dependencies |
 | --- | --- | --- |
 | `core` | Domain types and application use cases; currently the validated `WorkspaceRoot` (existing, readable, canonical directory) and `WorkspacePathResolver` (workspace-relative paths proven to stay inside that root) | Java platform only |
-| `desktop` | JavaFX lifecycle, welcome view, stylesheet and application composition | `core`, JavaFX Controls |
+| `desktop` | JavaFX lifecycle, workspace selection, welcome view, stylesheet and application composition | `core`, JavaFX Controls |
 
 The core exposes only the `io.github.stevdrey.monadaforge.core.workspace` package, added for the workspace boundary; further API is added only when a real use case requires it. The desktop declares the future dependency direction without inventing an orchestration framework.
 

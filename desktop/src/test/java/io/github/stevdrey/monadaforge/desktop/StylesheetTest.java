@@ -25,6 +25,14 @@ class StylesheetTest {
     }
 
     @Test
+    void definesWorkspaceSelectionClasses() throws IOException {
+        var css = stylesheet();
+        for (var styleClass : new String[] {".workspace-path", ".field-error", ".primary-button"}) {
+            assertTrue(css.contains(styleClass), "missing " + styleClass);
+        }
+    }
+
+    @Test
     void declaresPaletteOnShellInsteadOfSceneRoot() throws IOException {
         var css = stylesheet();
         assertTrue(css.contains("-forge-surface:"), "palette missing");

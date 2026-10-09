@@ -1,6 +1,10 @@
 package io.github.stevdrey.monadaforge.desktop;
 
+import io.github.stevdrey.monadaforge.core.workspace.WorkspaceRoot;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
@@ -8,11 +12,23 @@ import javafx.stage.Stage;
 public final class ForgeApplication extends Application {
     static final String PRODUCT_NAME = "Monada Forge";
 
+    private ExecutorService validation;
+
     @Override
     public void start(Stage stage) {
+        validation = Executors.newSingleThreadExecutor(task -> {
+            var thread = new Thread(task, "workspace-validation");
+            thread.setDaemon(true);
+            return thread;
+        });
         var shell = new ApplicationShell(PRODUCT_NAME, "A workspace for agent-assisted software delivery.");
-        shell.setContent(new WelcomeView());
-        shell.status().show(StatusKind.SUCCESS, "Project foundation ready");
+        var selectionView = new WorkspaceSelectionView(WorkspaceRoot::validate, validation, Platform::runLater);
+        selectionView.setOnContinue(root -> {
+            shell.setContent(new WelcomeView());
+            shell.status().show(StatusKind.SUCCESS, "Workspace: " + root.path());
+        });
+        shell.setContent(selectionView);
+        shell.status().show(StatusKind.INFO, "Select a workspace to begin");
 
         var scene = new Scene(shell, 880, 560);
 
@@ -21,6 +37,13 @@ public final class ForgeApplication extends Application {
         stage.setMinHeight(360);
         stage.setScene(scene);
         stage.show();
+    }
+
+    @Override
+    public void stop() {
+        if (validation != null) {
+            validation.shutdownNow();
+        }
     }
 
     public static void main(String[] args) {
