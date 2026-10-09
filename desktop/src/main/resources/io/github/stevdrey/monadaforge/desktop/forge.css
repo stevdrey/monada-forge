@@ -14,6 +14,7 @@
     -forge-error-bg: #fbe3e3;
     -forge-error-text: #8a1c1c;
 
+    -forge-focus: #38b6ff;
     -forge-accent: #2f5fd0;
     -forge-accent-hover: #2850b4;
     -forge-accent-pressed: #1f4094;
@@ -99,7 +100,13 @@
 }
 .button:hover { -fx-background-color: -forge-surface; }
 .button:pressed { -fx-background-color: -forge-border; }
-.button:focused { -fx-border-color: -forge-accent; }
+/* Focus is a 3px ring in a lighter sky blue than the accent; layered backgrounds keep the button size. */
+.button:focused {
+    -fx-background-color: -forge-focus, -forge-panel;
+    -fx-background-insets: 0, 3;
+    -fx-background-radius: 8px, 5px;
+    -fx-border-color: transparent;
+}
 .primary-button {
     -fx-background-color: -forge-accent;
     -fx-border-color: -forge-accent;
@@ -107,14 +114,13 @@
 }
 .primary-button:hover { -fx-background-color: -forge-accent-hover; -fx-border-color: -forge-accent-hover; }
 .primary-button:pressed { -fx-background-color: -forge-accent-pressed; }
-/* The accent fill hides an accent border, so focus is drawn as a dark ring around the fill. */
 .primary-button:focused {
-    -fx-background-color: -forge-text, -forge-accent;
-    -fx-background-insets: 0, 2;
-    -fx-background-radius: 6px, 4px;
+    -fx-background-color: -forge-focus, -forge-accent;
+    -fx-background-insets: 0, 3;
+    -fx-background-radius: 8px, 5px;
 }
-.primary-button:focused:hover { -fx-background-color: -forge-text, -forge-accent-hover; }
-.primary-button:focused:pressed { -fx-background-color: -forge-text, -forge-accent-pressed; }
+.primary-button:focused:hover { -fx-background-color: -forge-focus, -forge-accent-hover; }
+.primary-button:focused:pressed { -fx-background-color: -forge-focus, -forge-accent-pressed; }
 .button:disabled {
     -fx-background-color: -forge-surface;
     -fx-border-color: -forge-border;
