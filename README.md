@@ -2,7 +2,7 @@
 
 Monada Forge is a desktop workspace for agent-assisted software delivery: start from a task, assemble relevant context, coordinate implementation and review, and retain evidence about quality, feedback and cost.
 
-**Status:** initial project scaffold. The application displays a welcome window. Task ingestion, agents, external integrations, execution and persistence are not implemented yet.
+**Status:** initial project scaffold. The application lets you select a local workspace folder and then shows a welcome window. Task ingestion, agents, external integrations, execution and persistence are not implemented yet.
 
 ## Stack
 

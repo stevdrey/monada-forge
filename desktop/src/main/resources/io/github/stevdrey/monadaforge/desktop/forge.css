@@ -14,6 +14,11 @@
     -forge-error-bg: #fbe3e3;
     -forge-error-text: #8a1c1c;
 
+    -forge-focus: #0e7490;
+    -forge-accent: #2f5fd0;
+    -forge-accent-hover: #2850b4;
+    -forge-accent-pressed: #1f4094;
+
     -fx-font-family: "System";
     -fx-font-size: 15px;
     -fx-background-color: -forge-surface;
@@ -69,3 +74,64 @@
 .status-warning .status-message { -fx-text-fill: -forge-warning-text; }
 .status-error { -fx-background-color: -forge-error-bg; }
 .status-error .status-message { -fx-text-fill: -forge-error-text; }
+
+/* Workspace selection */
+.workspace-path {
+    -fx-font-family: "Monospaced";
+    -fx-background-color: -forge-surface;
+    -fx-border-color: -forge-border;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-padding: 8px 12px;
+}
+.field-error { -fx-text-fill: -forge-error-text; }
+
+/* Buttons */
+.action-row { -fx-spacing: 12px; -fx-alignment: center-left; }
+.button {
+    -fx-background-color: -forge-panel;
+    -fx-background-radius: 6px;
+    -fx-border-color: -forge-border;
+    -fx-border-radius: 6px;
+    -fx-text-fill: -forge-text;
+    -fx-font-weight: 600;
+    -fx-padding: 8px 18px;
+    -fx-cursor: hand;
+}
+.button:hover { -fx-background-color: -forge-surface; }
+.button:pressed { -fx-background-color: -forge-border; }
+/*
+ * Focus is a two-tone ring: 3px teal, 2px white gap, then the fill. No single color reaches 3:1
+ * against both white and the accent fill, so the ring only ever touches white (5.4:1). Layered
+ * backgrounds keep the button size unchanged. JavaFX has no :focus-visible, so the ring also shows
+ * after a mouse click.
+ */
+.button:focused {
+    -fx-background-color: -forge-focus, -forge-panel, -forge-panel;
+    -fx-background-insets: 0, 3, 5;
+    -fx-background-radius: 8px, 5px, 3px;
+    -fx-border-color: transparent;
+}
+.button:focused:hover { -fx-background-color: -forge-focus, -forge-panel, -forge-surface; }
+.button:focused:pressed { -fx-background-color: -forge-focus, -forge-panel, -forge-border; }
+.primary-button {
+    -fx-background-color: -forge-accent;
+    -fx-border-color: -forge-accent;
+    -fx-text-fill: white;
+}
+.primary-button:hover { -fx-background-color: -forge-accent-hover; -fx-border-color: -forge-accent-hover; }
+.primary-button:pressed { -fx-background-color: -forge-accent-pressed; }
+.primary-button:focused {
+    -fx-background-color: -forge-focus, -forge-panel, -forge-accent;
+    -fx-background-insets: 0, 3, 5;
+    -fx-background-radius: 8px, 5px, 3px;
+}
+.primary-button:focused:hover { -fx-background-color: -forge-focus, -forge-panel, -forge-accent-hover; }
+.primary-button:focused:pressed { -fx-background-color: -forge-focus, -forge-panel, -forge-accent-pressed; }
+.button:disabled {
+    -fx-background-color: -forge-surface;
+    -fx-border-color: -forge-border;
+    -fx-text-fill: -forge-text-muted;
+    -fx-opacity: 1;
+    -fx-cursor: default;
+}
