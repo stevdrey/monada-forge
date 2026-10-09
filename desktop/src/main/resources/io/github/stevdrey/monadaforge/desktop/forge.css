@@ -135,3 +135,41 @@
     -fx-opacity: 1;
     -fx-cursor: default;
 }
+
+/* Task intake form */
+.task-form { -fx-spacing: 16px; }
+.form-field, .item-list { -fx-spacing: 6px; }
+.item-rows { -fx-spacing: 10px; }
+.form-label { -fx-font-weight: bold; }
+.form-hint { -fx-text-fill: -forge-text-muted; }
+.item-row { -fx-spacing: 10px; }
+.item-index {
+    -fx-text-fill: -forge-text-muted;
+    -fx-font-weight: bold;
+    -fx-min-width: 24px;
+    -fx-padding: 8px 0 0 0;
+}
+.item-column { -fx-spacing: 6px; }
+.text-input {
+    -fx-background-color: -forge-panel;
+    -fx-background-radius: 6px;
+    -fx-border-color: -forge-border;
+    -fx-border-radius: 6px;
+    -fx-text-fill: -forge-text;
+    -fx-prompt-text-fill: -forge-text-muted;
+    -fx-padding: 6px 8px;
+}
+.text-area .content { -fx-background-color: transparent; }
+.text-area { -fx-padding: 0; }
+.text-area .content { -fx-padding: 6px 8px; }
+.text-input:focused {
+    -fx-background-color: -forge-focus, -forge-panel;
+    -fx-background-insets: 0, 2;
+    -fx-background-radius: 8px, 6px;
+    -fx-border-color: transparent;
+}
+.text-input:invalid { -fx-border-color: -forge-error-text; }
+.text-input:invalid:focused {
+    -fx-background-color: -forge-error-text, -forge-panel;
+    -fx-border-color: transparent;
+}

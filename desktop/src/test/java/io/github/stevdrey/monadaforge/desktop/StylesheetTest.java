@@ -33,6 +33,14 @@ class StylesheetTest {
     }
 
     @Test
+    void definesTaskIntakeClasses() throws IOException {
+        var css = stylesheet();
+        for (var styleClass : new String[] {".task-form", ".form-label", ".item-row", ".item-index", ".text-input:invalid", ".text-input:focused"}) {
+            assertTrue(css.contains(styleClass), "missing " + styleClass);
+        }
+    }
+
+    @Test
     void declaresPaletteOnShellInsteadOfSceneRoot() throws IOException {
         var css = stylesheet();
         assertTrue(css.contains("-forge-surface:"), "palette missing");

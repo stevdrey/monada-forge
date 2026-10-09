@@ -8,6 +8,7 @@ import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -20,6 +21,7 @@ final class WorkspaceSelectionView extends VBox {
     private final Label path = new Label();
     private final Label error = new Label();
     private final Button choose = new Button("Choose workspace…");
+    private final CheckBox keepTask = new CheckBox("Keep the task I already entered");
     private final Button proceed = new Button("Continue");
     private Path lastDirectory;
     private Consumer<WorkspaceRoot> onContinue = root -> {};
@@ -49,8 +51,24 @@ final class WorkspaceSelectionView extends VBox {
             }
         });
 
-        getChildren().addAll(heading, requirement, path, error, actions);
+        keepTask.setSelected(true);
+        keepTask.setVisible(false);
+        keepTask.setManaged(false);
+
+        getChildren().addAll(heading, requirement, path, error, keepTask, actions);
         render(selection.state());
+    }
+
+    /** Offers to keep or discard task text entered earlier; only shown when there is some. */
+    void offerKeepingTask(boolean visible) {
+        keepTask.setVisible(visible);
+        keepTask.setManaged(visible);
+        keepTask.setSelected(true);
+    }
+
+    /** Whether previously entered task text should survive the workspace change. */
+    boolean keepTask() {
+        return !keepTask.isVisible() || keepTask.isSelected();
     }
 
     void setOnContinue(Consumer<WorkspaceRoot> handler) {
