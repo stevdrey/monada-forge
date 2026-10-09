@@ -2,7 +2,7 @@
 
 ## Current surface
 
-Runtime: local JavaFX window and packaged stylesheet. Build time: Gradle distribution, plugins, Maven artifacts and GitHub Actions. No task intake, external provider, subprocess execution or persistence exists yet.
+Runtime: local JavaFX window and packaged stylesheet. Build time: Gradle distribution, plugins, Maven artifacts and GitHub Actions. Manual task intake exists: the user types the task title, description, acceptance criteria, constraints and non-goals, which core validates and holds in memory only. That text is untrusted data, displayed and stored but never interpreted, executed or logged. No external task source, provider, subprocess execution or persistence exists yet.
 
 ## Future risks and required controls
 

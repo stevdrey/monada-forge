@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.stevdrey.monadaforge.core.task.TaskDraft.Missing;
 import io.github.stevdrey.monadaforge.core.task.TaskDraft.Status;
+import io.github.stevdrey.monadaforge.core.workspace.WorkspaceRoot;
 import io.github.stevdrey.monadaforge.core.workspace.WorkspaceRootValidation;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -144,6 +145,41 @@ class TaskDraftServiceTest {
     }
 
     @Test
+    void clearingTheSpecificationKeepsWorkspaceAndScopeAndIsIdempotent() throws IOException {
+        completeDraft();
+        TaskDraft before = service.current();
+
+        service.clearSpecification();
+        service.clearSpecification();
+
+        TaskDraft after = service.current();
+        assertTrue(after.specification().isEmpty());
+        assertEquals(before.workspace(), after.workspace());
+        assertEquals(before.scope(), after.scope());
+        assertEquals(List.of(Missing.SPECIFICATION), after.missing());
+        assertTrue(before.specification().isPresent());
+    }
+
+    @Test
+    void applyingAValidatedRootBehavesLikeSelectingItsPath() throws IOException {
+        completeDraft();
+        TaskDraft before = service.current();
+        Path other = Files.createDirectory(temp.resolve("applied"));
+        var root = ((WorkspaceRootValidation.Accepted) WorkspaceRoot.validate(other)).root();
+
+        service.selectWorkspace(root);
+
+        TaskDraft after = service.current();
+        assertEquals(root, after.workspace().orElseThrow());
+        assertEquals(before.specification(), after.specification());
+        assertEquals(List.of(Missing.SCOPE), after.missing());
+
+        service.selectWorkspace(root);
+        assertEquals(after, service.current());
+        assertThrows(NullPointerException.class, () -> service.selectWorkspace((WorkspaceRoot) null));
+    }
+
+    @Test
     void replacingSpecificationKeepsWorkspaceAndScope() throws IOException {
         completeDraft();
         TaskDraft before = service.current();
@@ -230,7 +266,7 @@ class TaskDraftServiceTest {
 
     @Test
     void nullArgumentsAreRejected() {
-        assertThrows(NullPointerException.class, () -> service.selectWorkspace(null));
+        assertThrows(NullPointerException.class, () -> service.selectWorkspace((Path) null));
         assertThrows(NullPointerException.class, () -> service.updateSpecification(null));
     }
 

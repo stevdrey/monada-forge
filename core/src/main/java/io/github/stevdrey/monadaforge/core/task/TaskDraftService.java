@@ -41,6 +41,16 @@ public final class TaskDraftService {
         return result;
     }
 
+    /**
+     * Makes an already validated {@code root} the workspace, with the same scope rule as {@link
+     * #selectWorkspace(Path)}. It performs no I/O, so a caller can validate off-thread and apply the
+     * result only when it is still wanted. A {@link WorkspaceRoot} exists only for a validated
+     * directory, so nothing unchecked can be applied.
+     */
+    public synchronized void selectWorkspace(WorkspaceRoot root) {
+        draft = draft.withWorkspace(Objects.requireNonNull(root, "root"));
+    }
+
     /** Validates {@code input} and, if accepted, replaces the specification. */
     public synchronized TaskSpecificationValidation updateSpecification(TaskSpecificationDraft input) {
         TaskSpecificationValidation result = TaskSpecification.validate(Objects.requireNonNull(input, "input"));
@@ -48,6 +58,11 @@ public final class TaskDraftService {
             draft = draft.withSpecification(accepted.specification());
         }
         return result;
+    }
+
+    /** Drops the specification, keeping the workspace and scope; a no-op when none is held. */
+    public synchronized void clearSpecification() {
+        draft = draft.withoutSpecification();
     }
 
     /**

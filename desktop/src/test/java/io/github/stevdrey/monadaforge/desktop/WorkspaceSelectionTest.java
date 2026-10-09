@@ -60,6 +60,20 @@ class WorkspaceSelectionTest {
     }
 
     @Test
+    void rejectShowsTheReasonAndDropsAPendingValidation() throws IOException {
+        var queued = new ArrayDeque<Runnable>();
+        var selection = selection(WorkspaceRoot::validate, direct, queued::add);
+        selection.select(temp);
+        selection.reject(temp, "gone");
+
+        queued.forEach(Runnable::run); // the stale validation result arrives late
+
+        var invalid = assertInstanceOf(State.Invalid.class, selection.state());
+        assertEquals("gone", invalid.message());
+        assertEquals(temp, invalid.requested());
+    }
+
+    @Test
     void missingPathAndRegularFileAreInvalid() throws IOException {
         var selection = selection();
         selection.select(temp.resolve("missing"));

@@ -76,6 +76,12 @@ final class WorkspaceSelection {
         }
     }
 
+    /** Replaces the current state with {@code message} for {@code path} and drops any pending validation. */
+    void reject(Path path, String message) {
+        generation++;
+        publish(new State.Invalid(Objects.requireNonNull(path, "path"), Objects.requireNonNull(message, "message")));
+    }
+
     private State validate(Path candidate) {
         try {
             return switch (validator.validate(candidate)) {

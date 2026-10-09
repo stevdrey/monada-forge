@@ -8,6 +8,7 @@ import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -20,9 +21,11 @@ final class WorkspaceSelectionView extends VBox {
     private final Label path = new Label();
     private final Label error = new Label();
     private final Button choose = new Button("Choose workspace…");
+    private final CheckBox keepTask = new CheckBox("Keep the task I already entered");
     private final Button proceed = new Button("Continue");
     private Path lastDirectory;
     private Consumer<WorkspaceRoot> onContinue = root -> {};
+    private Runnable onSelectionChange = () -> {};
     private BiConsumer<StatusKind, String> onStatus = (kind, text) -> {};
 
     WorkspaceSelectionView(WorkspaceSelection.Validator validator, Executor background, Executor ui) {
@@ -49,8 +52,34 @@ final class WorkspaceSelectionView extends VBox {
             }
         });
 
-        getChildren().addAll(heading, requirement, path, error, actions);
+        keepTask.setSelected(true);
+        keepTask.setVisible(false);
+        keepTask.setManaged(false);
+
+        getChildren().addAll(heading, requirement, path, error, keepTask, actions);
         render(selection.state());
+    }
+
+    /** Called whenever the selection state changes, e.g. a new choice, a result or a rejection. */
+    void setOnSelectionChange(Runnable handler) {
+        onSelectionChange = Objects.requireNonNull(handler, "handler");
+    }
+
+    /** Shows {@code message} as the reason {@code path} cannot be used, disabling Continue. */
+    void reject(Path path, String message) {
+        selection.reject(path, message);
+    }
+
+    /** Offers to keep or discard task text entered earlier; only shown when there is some. */
+    void offerKeepingTask(boolean visible) {
+        keepTask.setVisible(visible);
+        keepTask.setManaged(visible);
+        keepTask.setSelected(true);
+    }
+
+    /** Whether previously entered task text should survive the workspace change. */
+    boolean keepTask() {
+        return !keepTask.isVisible() || keepTask.isSelected();
     }
 
     void setOnContinue(Consumer<WorkspaceRoot> handler) {
@@ -85,20 +114,14 @@ final class WorkspaceSelectionView extends VBox {
         // The chooser stays enabled while validating so a stalled file system can be abandoned.
         var presentation = WorkspacePresentation.of(state);
         requirement.setText(presentation.requirementText());
-        show(path, presentation.pathText());
-        show(error, presentation.errorText());
+        FeedbackLabels.show(path, presentation.pathText());
+        FeedbackLabels.show(error, presentation.errorText());
         proceed.setDisable(!presentation.continueEnabled());
+        onSelectionChange.run();
         if (state instanceof WorkspaceSelection.State.Selected selected) {
             // Staleness of this directory is handled by WorkspaceChooser.pick, so Invalid keeps it.
             lastDirectory = selected.root().path();
         }
         publishStatus();
-    }
-
-    private static void show(Label label, String text) {
-        boolean visible = text != null;
-        label.setText(visible ? text : "");
-        label.setVisible(visible);
-        label.setManaged(visible);
     }
 }
