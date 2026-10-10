@@ -185,6 +185,8 @@
 .review-form { -fx-spacing: 16px; }
 .review-details { -fx-spacing: 14px; }
 .review-section { -fx-spacing: 4px; }
+.review-scope > .review-section { -fx-padding: 10px 0 0 0; }
+.review-scope .scope-warning { -fx-padding: 0; }
 .review-heading { -fx-font-weight: bold; }
 .review-list { -fx-spacing: 2px; }
 .review-notice {

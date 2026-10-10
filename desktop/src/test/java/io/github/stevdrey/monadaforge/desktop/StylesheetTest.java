@@ -53,7 +53,7 @@ class StylesheetTest {
         var css = stylesheet();
         for (var styleClass : new String[] {
             ".review-form", ".review-details", ".review-section", ".review-heading", ".review-list",
-            ".review-notice", ".review-blocker", ".review-ready"
+            ".review-scope", ".review-notice", ".review-blocker", ".review-ready"
         }) {
             assertTrue(css.contains(styleClass), "missing " + styleClass);
         }

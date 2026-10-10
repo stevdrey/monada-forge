@@ -127,7 +127,7 @@ final class TaskReviewView extends VBox {
 
     private VBox scopeSection() {
         var section = new VBox();
-        section.getStyleClass().add("review-section");
+        section.getStyleClass().addAll("review-section", "review-scope");
         section.getChildren().add(heading("Scope"));
         switch (model.scopeMode()) {
             case UNSET -> section.getChildren().add(text("Not defined", false));
