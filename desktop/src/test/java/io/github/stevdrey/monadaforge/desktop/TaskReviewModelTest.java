@@ -144,7 +144,7 @@ class TaskReviewModelTest {
     }
 
     @Test
-    void anEditedFormHidesAPriorConfirmation() throws IOException {
+    void anEditedFormKeepsCoresConfirmationVisibleButBlocksConfirming() throws IOException {
         drafts.selectWorkspace(ws);
         specification();
         drafts.selectPaths(List.of("src"), null);
@@ -152,7 +152,8 @@ class TaskReviewModelTest {
 
         var model = model(false, true);
 
-        assertFalse(model.confirmed());
+        assertTrue(model.confirmed());
+        assertEquals(List.of(Blocker.SPECIFICATION_NOT_VALIDATED), model.blockers());
         assertFalse(model.canConfirm());
     }
 }

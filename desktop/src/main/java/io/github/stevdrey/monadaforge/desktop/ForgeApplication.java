@@ -40,8 +40,8 @@ public final class ForgeApplication extends Application {
         // The review shows core's draft; the forms only say whether they still match it.
         var reviewView = new TaskReviewView(() -> TaskReviewModel.of(
                 drafts.current(),
-                form.result() instanceof TaskIntakeForm.Result.Valid,
-                scopeForm.result() instanceof TaskScopeForm.Result.Valid));
+                form.isValid(),
+                scopeForm.isValid()));
         reviewView.setOnStatus(shell.status()::show);
         Runnable changeWorkspace = () -> {
             selectionView.offerKeepingTask(intakeView.hasContent() || scopeView.hasContent());

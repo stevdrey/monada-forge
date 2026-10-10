@@ -58,5 +58,10 @@ class TaskReviewMessagesTest {
         var confirmed = TaskReviewMessages.status(TaskReviewModel.of(drafts.current(), true, true));
         assertEquals(StatusKind.SUCCESS, confirmed.kind());
         assertEquals(TaskReviewMessages.CONFIRMED, confirmed.text());
+
+        var withEdits = TaskReviewMessages.status(TaskReviewModel.of(drafts.current(), false, true));
+        assertEquals(StatusKind.WARNING, withEdits.kind());
+        assertEquals("Resolve 1 problem before confirming", withEdits.text());
+        assertTrue(TaskReviewMessages.CONFIRMED_WITH_EDITS.contains("not part of it"));
     }
 }

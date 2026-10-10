@@ -91,9 +91,16 @@ final class TaskReviewView extends VBox {
         }
         blockers.setVisible(!model.blockers().isEmpty());
         blockers.setManaged(!model.blockers().isEmpty());
-        FeedbackLabels.show(confirmation, model.confirmed() ? TaskReviewMessages.CONFIRMED : null);
+        FeedbackLabels.show(confirmation, confirmationText(model));
         confirm.setDisable(!model.canConfirm());
         publishStatus();
+    }
+
+    private static String confirmationText(TaskReviewModel model) {
+        if (!model.confirmed()) {
+            return null;
+        }
+        return model.blockers().isEmpty() ? TaskReviewMessages.CONFIRMED : TaskReviewMessages.CONFIRMED_WITH_EDITS;
     }
 
     void setOnConfirm(Runnable handler) {

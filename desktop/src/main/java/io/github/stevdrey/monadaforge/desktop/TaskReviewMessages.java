@@ -8,6 +8,8 @@ final class TaskReviewMessages {
             "Confirming only marks this draft as reviewed and ready for a later phase. It does not authorize "
                     + "any action, and no agent has run.";
     static final String CONFIRMED = "Confirmed and ready for the next phase. No agent has run yet";
+    static final String CONFIRMED_WITH_EDITS =
+            "This draft is confirmed, but edits you made since are not part of it. Validate them to update the draft";
     static final String READY = "Review the task, then confirm it";
 
     private TaskReviewMessages() {}
@@ -26,7 +28,7 @@ final class TaskReviewMessages {
 
     static StatusMessage status(TaskReviewModel model) {
         Objects.requireNonNull(model, "model");
-        if (model.confirmed()) {
+        if (model.confirmed() && model.blockers().isEmpty()) {
             return new StatusMessage(StatusKind.SUCCESS, CONFIRMED);
         }
         if (!model.blockers().isEmpty()) {

@@ -404,6 +404,23 @@ class TaskDraftServiceTest {
     }
 
     @Test
+    void reapplyingEqualDataKeepsConfirmation() throws IOException {
+        completeDraft();
+        service.confirm();
+        TaskDraft confirmed = service.current();
+
+        service.updateSpecification(spec("Title"));
+        assertSame(confirmed, service.current());
+
+        service.selectPaths(List.of("src"), null);
+        assertSame(confirmed, service.current());
+
+        selectWorkspace(ws);
+        assertSame(confirmed, service.current());
+        assertEquals(Status.READY, service.current().status());
+    }
+
+    @Test
     void changingTheSpecificationWithdrawsConfirmation() throws IOException {
         completeDraft();
         service.confirm();

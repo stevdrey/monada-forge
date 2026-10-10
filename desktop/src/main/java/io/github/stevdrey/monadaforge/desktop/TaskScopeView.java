@@ -180,7 +180,7 @@ final class TaskScopeView extends VBox {
         excluded.refreshErrors();
         validate.setDisable(validation.pending());
         // Only a scope core accepted and the user has not edited since may go on to review.
-        review.setDisable(validation.pending() || !(form.result() instanceof TaskScopeForm.Result.Valid));
+        review.setDisable(validation.pending() || !form.isValid());
         var status = TaskScopeMessages.status(form.result(), form.needsRevalidation());
         outcome.setText(validation.pending() ? "Checking the scope…" : status.text() + ".");
         publishStatus();

@@ -13,7 +13,8 @@ import java.util.Optional;
  * a validated {@link TaskScope}. It is {@link Status#REVIEWABLE} only when all three were supplied
  * explicitly; nothing is inferred, so an {@linkplain TaskScope#unset() unset} scope is reported as
  * missing rather than read as the whole workspace. A reviewable draft becomes {@link Status#READY}
- * once it is explicitly confirmed; any later change to a component withdraws that confirmation.
+ * once it is explicitly confirmed; any later change to a component withdraws that confirmation,
+ * while re-applying equal data keeps it.
  * Confirmation only records that the draft was reviewed: it is not an authorization to act. Task
  * text stays untrusted data and the draft grants no authority beyond the validated scope. Instances
  * come only from {@link TaskDraftService}.
@@ -61,12 +62,18 @@ public final class TaskDraft {
     TaskDraft withWorkspace(WorkspaceRoot newWorkspace) {
         Objects.requireNonNull(newWorkspace, "workspace");
         // A scope is bound to the root it was validated against, so it never survives a different root.
-        TaskScope keptScope = newWorkspace.equals(workspace) ? scope : TaskScope.unset();
-        return new TaskDraft(newWorkspace, specification, keptScope, false);
+        if (newWorkspace.equals(workspace)) {
+            return this;
+        }
+        return new TaskDraft(newWorkspace, specification, TaskScope.unset(), false);
     }
 
     TaskDraft withSpecification(TaskSpecification newSpecification) {
-        return new TaskDraft(workspace, Objects.requireNonNull(newSpecification, "specification"), scope, false);
+        Objects.requireNonNull(newSpecification, "specification");
+        // Re-applying equal data changes nothing, so a confirmation of that exact content stays valid.
+        return newSpecification.equals(specification)
+                ? this
+                : new TaskDraft(workspace, newSpecification, scope, false);
     }
 
     TaskDraft withoutSpecification() {
@@ -74,7 +81,8 @@ public final class TaskDraft {
     }
 
     TaskDraft withScope(TaskScope newScope) {
-        return new TaskDraft(workspace, specification, Objects.requireNonNull(newScope, "scope"), false);
+        Objects.requireNonNull(newScope, "scope");
+        return newScope.equals(scope) ? this : new TaskDraft(workspace, specification, newScope, false);
     }
 
     /** A copy marked as confirmed; only a draft with nothing {@linkplain #missing() missing} can be. */

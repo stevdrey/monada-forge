@@ -51,7 +51,7 @@ final class TaskReviewModel {
         this.scopeMode = switch (scope) {
             case TaskScope.Paths _ -> ScopeMode.SPECIFIC_PATHS;
             case TaskScope.EntireWorkspace _ -> ScopeMode.ENTIRE_WORKSPACE;
-            default -> ScopeMode.UNSET;
+            case TaskScope.Unset _ -> ScopeMode.UNSET;
         };
         this.allowed = scope instanceof TaskScope.Paths paths
                 ? paths.allowed().stream().map(TaskScope.ScopeEntry::relative).toList()
@@ -60,7 +60,7 @@ final class TaskReviewModel {
             case TaskScope.Paths paths -> paths.excluded().stream().map(TaskScope.ScopeEntry::relative).toList();
             case TaskScope.EntireWorkspace entire ->
                     entire.excluded().stream().map(TaskScope.ScopeEntry::relative).toList();
-            default -> List.of();
+            case TaskScope.Unset _ -> List.of();
         };
         var found = new ArrayList<Blocker>();
         if (workspace.isEmpty()) {
@@ -77,7 +77,8 @@ final class TaskReviewModel {
             found.add(Blocker.SCOPE_NOT_VALIDATED);
         }
         this.blockers = List.copyOf(found);
-        this.confirmed = blockers.isEmpty() && draft.status() == TaskDraft.Status.READY;
+        // Core is the source of truth; unvalidated form edits show up as blockers, not as a withdrawn confirmation.
+        this.confirmed = draft.status() == TaskDraft.Status.READY;
     }
 
     static TaskReviewModel of(TaskDraft draft, boolean specificationInSync, boolean scopeInSync) {
@@ -115,10 +116,12 @@ final class TaskReviewModel {
         return blockers;
     }
 
+    /** Whether core holds this draft as confirmed, regardless of what the forms contain now. */
     boolean confirmed() {
         return confirmed;
     }
 
+    /** Whether confirmation is offered: everything validated and not confirmed already. */
     boolean canConfirm() {
         return blockers.isEmpty() && !confirmed;
     }

@@ -13,11 +13,11 @@ Scope: the bounded intake flow from workspace selection through task and scope e
 | Check | Result |
 | --- | --- |
 | `./gradlew build` | Passed |
-| Core tests (`:core:test`) | 130 tests, 0 failures, 0 skipped |
-| Desktop tests (`:desktop:test`) | 104 tests, 0 failures, 0 skipped |
-| Draft confirmation state transitions (`TaskDraftServiceTest`) | Passed: complete draft becomes `READY`; incomplete drafts are rejected unchanged; any change to workspace, task or scope (and clearing) withdraws confirmation; rejected input keeps it; confirming twice is idempotent |
+| Core tests (`:core:test`) | 131 tests, 0 failures, 0 skipped |
+| Desktop tests (`:desktop:test`) | 106 tests, 0 failures, 0 skipped |
+| Draft confirmation state transitions (`TaskDraftServiceTest`) | Passed: complete draft becomes `READY`; incomplete drafts are rejected unchanged; any change to workspace, task or scope (and clearing) withdraws confirmation; rejected input keeps it; re-applying equal data keeps it; confirming twice is idempotent |
 | No side effects on confirm (`TaskDraftServiceTest`) | Passed: the workspace tree is identical before and after `confirm()`; `toString` leaks no task text |
-| Review gate (`TaskReviewModelTest`) | Passed: all draft parts exposed in order for specific-path and whole-workspace scopes; missing or unvalidated workspace, task or scope blocks confirmation; a changed workspace blocks it |
+| Review gate (`TaskReviewModelTest`) | Passed: all draft parts exposed in order for specific-path and whole-workspace scopes; missing or unvalidated workspace, task or scope blocks confirmation; a changed workspace blocks it; a confirmed draft with unvalidated form edits stays confirmed in core but blocks re-confirming |
 | Review text (`TaskReviewMessagesTest`) | Passed: blockers are actionable; the notice states that confirmation authorizes nothing and that no agent has run |
 | Review stylesheet classes (`StylesheetTest`) | Passed |
 | Manual valid flow, whole-workspace scope (`:desktop:run`) | Observed in screenshots supplied by the maintainer: the review shows workspace, task and scope with the broad-scope warning and the no-authorization notice; "Confirm task" shows the ready state and disables itself. Filesystem, process and network activity were not inspected |

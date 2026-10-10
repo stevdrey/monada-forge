@@ -34,6 +34,20 @@ class TaskIntakeFormTest {
     }
 
     @Test
+    void isValidOnlyWhileTheAcceptedInputIsUnedited() {
+        assertFalse(form.isValid());
+        form.submit();
+        assertFalse(form.isValid());
+
+        fillValid();
+        form.submit();
+        assertTrue(form.isValid());
+
+        form.setTitle("Another title");
+        assertFalse(form.isValid());
+    }
+
+    @Test
     void validInputIsAcceptedByCoreAndStoredInDraft() {
         fillValid();
         form.addItem(Field.CONSTRAINTS);

@@ -11,4 +11,4 @@ This is a sequencing proposal, not a delivery commitment.
 | 4 — Delivery loop | Implementation, verification and feedback tracking | End-to-end evidence and deterministic stop conditions |
 | 5 — Learning and evaluation | Optional Neuron/Resonance Store integration and cost/quality analysis | Reproducible comparisons, provenance and measured value |
 
-Phases 0 and 1 are implemented here; Phases 2 onward are not. Inspect current `main` before turning any phase into an Issue. Use [Spec Context](../development/spec-context-template.md), including exact existing paths and explicit non-goals.
+Phase 0 and Phase 1 are implemented here (the Phase 1 manual desktop verification is still partly pending); Phases 2 onward are not. Inspect current `main` before turning any phase into an Issue. Use [Spec Context](../development/spec-context-template.md), including exact existing paths and explicit non-goals.

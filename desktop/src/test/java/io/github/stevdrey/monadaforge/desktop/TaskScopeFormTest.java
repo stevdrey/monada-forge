@@ -89,6 +89,19 @@ class TaskScopeFormTest {
     }
 
     @Test
+    void isValidOnlyWhileTheAcceptedScopeIsUnedited() {
+        assertFalse(form.isValid());
+        allow("src/main");
+        assertFalse(form.isValid());
+
+        form.submit();
+        assertTrue(form.isValid());
+
+        form.setItem(Field.ALLOWED, 0, "docs");
+        assertFalse(form.isValid());
+    }
+
+    @Test
     void entireWorkspaceIsAcceptedOnlyAfterTheExplicitChoice() {
         form.setMode(TaskScopeForm.Mode.ENTIRE_WORKSPACE);
         form.addItem(Field.EXCLUDED);
