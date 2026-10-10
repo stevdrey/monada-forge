@@ -77,14 +77,14 @@ final class TaskScopeView extends VBox {
                         + "entire workspace is chosen.",
                 "allowed path",
                 form,
-                this::refresh);
+                this::edited);
         excluded = new PathListEditor(
                 Field.EXCLUDED,
                 "Excluded paths (optional)",
                 "Parts inside the scope that stay off limits. Exclusions always win.",
                 "excluded path",
                 form,
-                this::refresh);
+                this::edited);
 
         outcome.getStyleClass().add("view-body");
         outcome.setWrapText(true);
@@ -163,6 +163,15 @@ final class TaskScopeView extends VBox {
 
     private void choose(TaskScopeForm.Mode mode) {
         form.setMode(mode);
+        edited();
+    }
+
+    /** Any input change supersedes a validation still running, so the user can submit the new input at once. */
+    private void edited() {
+        if (pending) {
+            pending = false;
+            requestId++;
+        }
         refresh();
     }
 

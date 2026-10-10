@@ -31,9 +31,9 @@ public final class ForgeApplication extends Application {
         intakeView.setOnStatus(shell.status()::show);
         // Scope is checked by core against the selected workspace; the form only holds typed paths.
         var scopeForm = new TaskScopeForm(
-                (mode, allowed, excluded) -> mode == TaskScopeForm.Mode.ENTIRE_WORKSPACE
-                        ? drafts.selectEntireWorkspace(excluded)
-                        : drafts.selectPaths(allowed, excluded),
+                (mode, allowed, excluded, stillWanted) -> mode == TaskScopeForm.Mode.ENTIRE_WORKSPACE
+                        ? drafts.selectEntireWorkspace(excluded, stillWanted)
+                        : drafts.selectPaths(allowed, excluded, stillWanted),
                 drafts::clearScope);
         var scopeView = new TaskScopeView(scopeForm, validation, Platform::runLater);
         scopeView.setOnStatus(shell.status()::show);

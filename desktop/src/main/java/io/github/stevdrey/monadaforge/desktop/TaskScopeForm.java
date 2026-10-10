@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.BooleanSupplier;
 
 /**
  * Toolkit-independent state of the task scope editor.
@@ -38,7 +39,9 @@ final class TaskScopeForm {
     /** Throwing validator so unexpected I/O failures stay distinguishable from invalid input. */
     @FunctionalInterface
     interface Validator {
-        TaskScopeValidation validate(Mode mode, List<String> allowed, List<String> excluded) throws IOException;
+        /** {@code stillWanted} must be consulted when applying the result, see {@code TaskDraftService}. */
+        TaskScopeValidation validate(Mode mode, List<String> allowed, List<String> excluded, BooleanSupplier stillWanted)
+                throws IOException;
     }
 
     sealed interface Result {
@@ -71,7 +74,7 @@ final class TaskScopeForm {
     private Mode mode = Mode.NOT_CHOSEN;
     private Result result = new Result.NotValidated();
     private boolean workspaceChanged;
-    private long version;
+    private volatile long version; // read by the guard of a validation running off the UI thread
 
     /**
      * @param onInvalidated run when an accepted result stops matching the form, so whoever stored the
@@ -176,6 +179,11 @@ final class TaskScopeForm {
         workspaceChanged = false;
     }
 
+    /** Whether {@code request} still matches the form; safe to call from any thread. */
+    boolean isCurrent(Request request) {
+        return request.version() == version;
+    }
+
     /** Copies the current input for {@link #validate}. */
     Request request() {
         return new Request(version, mode, List.copyOf(allowed), List.copyOf(excluded));
@@ -190,7 +198,8 @@ final class TaskScopeForm {
             return null;
         }
         try {
-            return validator.validate(request.mode(), request.allowed(), request.excluded());
+            return validator.validate(
+                    request.mode(), request.allowed(), request.excluded(), () -> isCurrent(request));
         } catch (IOException | RuntimeException e) {
             LOG.log(System.Logger.Level.WARNING, "Scope validation failed unexpectedly", e);
             return null;
@@ -203,7 +212,7 @@ final class TaskScopeForm {
      * Returns the resulting {@link #result()}.
      */
     Result complete(Request request, TaskScopeValidation outcome) {
-        boolean current = request.version() == version;
+        boolean current = isCurrent(request);
         if (!current) {
             if (outcome instanceof TaskScopeValidation.Accepted) {
                 onInvalidated.run();
@@ -257,10 +266,8 @@ final class TaskScopeForm {
     }
 
     private void invalidate() {
-        version++;
-        if (result instanceof Result.Valid) {
-            onInvalidated.run();
-        }
+        version++; // before onInvalidated: a guarded application either sees this or is cleared by it
+        onInvalidated.run(); // also while a validation is in flight, so it cannot leave its scope behind
         result = new Result.NotValidated();
     }
 }

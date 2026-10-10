@@ -37,9 +37,9 @@ class TaskScopeFormTest {
         service = new TaskDraftService();
         assertInstanceOf(WorkspaceRootValidation.Accepted.class, service.selectWorkspace(ws));
         form = new TaskScopeForm(
-                (mode, allowed, excluded) -> mode == TaskScopeForm.Mode.ENTIRE_WORKSPACE
-                        ? service.selectEntireWorkspace(excluded)
-                        : service.selectPaths(allowed, excluded),
+                (mode, allowed, excluded, stillWanted) -> mode == TaskScopeForm.Mode.ENTIRE_WORKSPACE
+                        ? service.selectEntireWorkspace(excluded, stillWanted)
+                        : service.selectPaths(allowed, excluded, stillWanted),
                 service::clearScope);
     }
 
@@ -192,7 +192,7 @@ class TaskScopeFormTest {
     @Test
     void validatorFailureIsReportedWithoutChangingEntries() {
         var failing = new TaskScopeForm(
-                (mode, allowed, excluded) -> {
+                (mode, allowed, excluded, stillWanted) -> {
                     throw new IOException("boom");
                 },
                 () -> {});
@@ -275,11 +275,11 @@ class TaskScopeFormTest {
     void failedRevalidationWithdrawsThePreviouslyAcceptedScope() {
         var withdrawn = new boolean[1];
         var flaky = new TaskScopeForm(
-                (mode, allowed, excluded) -> {
+                (mode, allowed, excluded, stillWanted) -> {
                     if (withdrawn[0]) {
                         throw new IOException("boom");
                     }
-                    return service.selectEntireWorkspace(excluded);
+                    return service.selectEntireWorkspace(excluded, stillWanted);
                 },
                 service::clearScope);
         flaky.setMode(TaskScopeForm.Mode.ENTIRE_WORKSPACE);
@@ -308,5 +308,29 @@ class TaskScopeFormTest {
 
         assertFalse(form.needsRevalidation());
         assertEquals(TaskScopeForm.Mode.NOT_CHOSEN, form.mode());
+    }
+
+    @Test
+    void editMadeWhileValidatingStopsTheRequestFromReinstallingItsScope() {
+        allow("src");
+        var request = form.request();
+
+        form.setItem(Field.ALLOWED, 0, "docs"); // edit before the background validation applies its result
+        assertFalse(form.isCurrent(request));
+        var outcome = form.validate(request);
+
+        assertInstanceOf(TaskScopeValidation.Accepted.class, outcome);
+        assertInstanceOf(TaskScope.Unset.class, service.current().scope());
+    }
+
+    @Test
+    void everyEditWithdrawsTheDraftScopeEvenWhenNothingWasAccepted() {
+        var withdrawals = new int[1];
+        var counting = new TaskScopeForm((mode, allowed, excluded, stillWanted) -> null, () -> withdrawals[0]++);
+
+        counting.setMode(TaskScopeForm.Mode.SPECIFIC_PATHS);
+        counting.addItem(Field.ALLOWED);
+
+        assertEquals(2, withdrawals[0]);
     }
 }

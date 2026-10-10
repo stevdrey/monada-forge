@@ -225,6 +225,20 @@ class TaskDraftServiceTest {
     }
 
     @Test
+    void unwantedScopeIsReturnedButNeverApplied() throws IOException {
+        selectWorkspace(ws);
+
+        var unwanted = service.selectPaths(List.of("src"), null, () -> false);
+        var unwantedWhole = service.selectEntireWorkspace(null, () -> false);
+
+        assertInstanceOf(TaskScopeValidation.Accepted.class, unwanted);
+        assertInstanceOf(TaskScopeValidation.Accepted.class, unwantedWhole);
+        assertInstanceOf(TaskScope.Unset.class, service.current().scope());
+        service.selectPaths(List.of("src"), null, () -> true);
+        assertInstanceOf(TaskScope.Paths.class, service.current().scope());
+    }
+
+    @Test
     void applyingAValidatedRootBehavesLikeSelectingItsPath() throws IOException {
         completeDraft();
         TaskDraft before = service.current();

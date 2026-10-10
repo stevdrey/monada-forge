@@ -48,4 +48,14 @@ class TaskScopeMessagesTest {
                                 false)
                         .text());
     }
+
+    @Test
+    void workspaceRootAdviceDependsOnTheList() {
+        var allowed = TaskScopeMessages.describe(new Violation(Field.ALLOWED, 0, Reason.WORKSPACE_ROOT));
+        var excluded = TaskScopeMessages.describe(new Violation(Field.EXCLUDED, 0, Reason.WORKSPACE_ROOT));
+
+        assertTrue(allowed.contains("entire workspace"));
+        assertFalse(excluded.contains("entire workspace"));
+        assertTrue(excluded.contains("narrower"));
+    }
 }

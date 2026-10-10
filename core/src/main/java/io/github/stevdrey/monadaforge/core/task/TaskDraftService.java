@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.BooleanSupplier;
 
 /**
  * Holds the current {@link TaskDraft} in process memory and is the single place that changes it.
@@ -80,8 +81,20 @@ public final class TaskDraftService {
      * @throws IOException on unexpected I/O failures, as opposed to invalid or escaping input
      */
     public TaskScopeValidation selectEntireWorkspace(List<String> excluded) throws IOException {
+        return selectEntireWorkspace(excluded, () -> true);
+    }
+
+    /**
+     * Like {@link #selectEntireWorkspace(List)}, but the result is applied only if {@code
+     * stillWanted} is true at the moment of applying (checked under the draft's lock). When it is
+     * false the draft is left untouched and the validation result is returned unapplied, so a caller
+     * that has dropped the request cannot have it reinstate a scope.
+     */
+    public TaskScopeValidation selectEntireWorkspace(List<String> excluded, BooleanSupplier stillWanted)
+            throws IOException {
         Basis basis = basis();
-        return applyIfCurrent(basis, TaskScope.validateEntireWorkspace(basis.root(), excluded));
+        return applyIfCurrent(
+                basis, TaskScope.validateEntireWorkspace(basis.root(), excluded), Objects.requireNonNull(stillWanted));
     }
 
     /**
@@ -92,8 +105,15 @@ public final class TaskDraftService {
      * @throws IOException on unexpected I/O failures, as opposed to invalid or escaping input
      */
     public TaskScopeValidation selectPaths(List<String> allowed, List<String> excluded) throws IOException {
+        return selectPaths(allowed, excluded, () -> true);
+    }
+
+    /** Like {@link #selectPaths(List, List)} with the {@code stillWanted} guard of {@link #selectEntireWorkspace(List, BooleanSupplier)}. */
+    public TaskScopeValidation selectPaths(List<String> allowed, List<String> excluded, BooleanSupplier stillWanted)
+            throws IOException {
         Basis basis = basis();
-        return applyIfCurrent(basis, TaskScope.validatePaths(basis.root(), allowed, excluded));
+        return applyIfCurrent(
+                basis, TaskScope.validatePaths(basis.root(), allowed, excluded), Objects.requireNonNull(stillWanted));
     }
 
     /** Drops the scope back to {@linkplain TaskScope#unset() unset}, keeping workspace and specification; a no-op when unset. */
@@ -123,10 +143,15 @@ public final class TaskDraftService {
 
     /** Applies {@code result}, validated against {@code basis}, only while that exact draft state still holds. */
     synchronized TaskScopeValidation applyIfCurrent(Basis basis, TaskScopeValidation result) {
+        return applyIfCurrent(basis, result, () -> true);
+    }
+
+    synchronized TaskScopeValidation applyIfCurrent(
+            Basis basis, TaskScopeValidation result, BooleanSupplier stillWanted) {
         if (basis.epoch() != epoch || !basis.root().equals(draft.workspace().orElse(null))) {
             throw new IllegalStateException("The workspace changed during validation");
         }
-        if (result instanceof TaskScopeValidation.Accepted accepted) {
+        if (result instanceof TaskScopeValidation.Accepted accepted && stillWanted.getAsBoolean()) {
             draft = draft.withScope(accepted.scope());
         }
         return result;

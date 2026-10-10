@@ -32,8 +32,11 @@ final class TaskScopeMessages {
             case PARENT_NOT_FOUND -> subject + " does not exist, and neither does its parent directory.";
             case NOT_ACCESSIBLE -> subject + " cannot be accessed. Check its permissions.";
             case UNRESOLVABLE -> subject + " could not be checked against the workspace boundary.";
-            case WORKSPACE_ROOT -> subject + " is the workspace itself. To allow everything, choose the entire "
-                    + "workspace explicitly.";
+            case WORKSPACE_ROOT -> field == Field.EXCLUDED
+                    ? subject + " is the workspace itself, so excluding it would leave nothing. Remove it or "
+                            + "exclude a narrower path."
+                    : subject + " is the workspace itself. To allow everything, choose the entire workspace "
+                            + "explicitly.";
             case DUPLICATE -> subject + " repeats another entry in this list.";
             case ALLOWED_AND_EXCLUDED_CONTRADICT -> field == Field.ALLOWED
                     ? subject + " is completely excluded. Remove it or narrow the exclusion."
