@@ -44,6 +44,7 @@ final class TaskScopeView extends VBox {
     private Runnable onBack = () -> {};
     private BiConsumer<StatusKind, String> onStatus = (kind, text) -> {};
     private boolean pending;
+    private long requestId;
 
     TaskScopeView(TaskScopeForm form, Executor background, Executor ui) {
         this.form = Objects.requireNonNull(form, "form");
@@ -108,6 +109,9 @@ final class TaskScopeView extends VBox {
 
     /** Shows the form after it was changed from outside, e.g. by a workspace change. */
     void syncFromForm() {
+        // A validation still running belongs to the previous state; its outcome is ignored.
+        pending = false;
+        requestId++;
         modes.selectToggle(
                 switch (form.mode()) {
                     case NOT_CHOSEN -> null;
@@ -164,22 +168,25 @@ final class TaskScopeView extends VBox {
 
     private void submit() {
         var request = form.request();
+        long id = ++requestId;
         pending = true;
         refresh();
         try {
             background.execute(() -> {
                 var validation = form.validate(request);
-                ui.execute(() -> finish(request, validation));
+                ui.execute(() -> finish(id, request, validation));
             });
         } catch (RejectedExecutionException e) {
             // E.g. the executor was shut down: never leave the view waiting for a result.
             LOG.log(System.Logger.Level.WARNING, "Scope validation was rejected", e);
-            finish(request, null);
+            finish(id, request, null);
         }
     }
 
-    private void finish(TaskScopeForm.Request request, TaskScopeValidation validation) {
-        pending = false;
+    private void finish(long id, TaskScopeForm.Request request, TaskScopeValidation validation) {
+        if (id == requestId) {
+            pending = false;
+        }
         form.complete(request, validation);
         allowed.refreshErrors();
         excluded.refreshErrors();

@@ -290,4 +290,23 @@ class TaskScopeFormTest {
 
         assertInstanceOf(TaskScope.Unset.class, service.current().scope());
     }
+
+    @Test
+    void editingAPeerClearsAStaleDuplicateError() {
+        allow("src", "src");
+        assertEquals(List.of(new Violation(Field.ALLOWED, 1, Reason.DUPLICATE)), invalid());
+
+        form.setItem(Field.ALLOWED, 0, "docs");
+
+        assertTrue(form.errors().isEmpty());
+        assertInstanceOf(TaskScopeForm.Result.Valid.class, form.submit());
+    }
+
+    @Test
+    void workspaceChangeWithNothingEnteredDoesNotAskForRevalidation() {
+        form.workspaceChanged(true);
+
+        assertFalse(form.needsRevalidation());
+        assertEquals(TaskScopeForm.Mode.NOT_CHOSEN, form.mode());
+    }
 }

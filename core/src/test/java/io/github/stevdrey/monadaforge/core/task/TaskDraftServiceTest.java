@@ -178,14 +178,50 @@ class TaskDraftServiceTest {
     @Test
     void scopeValidatedAgainstAReplacedWorkspaceIsNotApplied() throws IOException {
         selectWorkspace(ws);
-        var staleRoot = service.current().workspace().orElseThrow();
-        var stale = TaskScope.validatePaths(staleRoot, List.of("src"), null);
-        Path other = Files.createDirectory(temp.resolve("other"));
-        selectWorkspace(other);
+        var basis = service.basis();
+        var stale = TaskScope.validatePaths(basis.root(), List.of("src"), null);
+        selectWorkspace(Files.createDirectory(temp.resolve("other")));
 
-        assertThrows(IllegalStateException.class, () -> service.applyIfCurrent(staleRoot, stale));
+        assertThrows(IllegalStateException.class, () -> service.applyIfCurrent(basis, stale));
 
         assertInstanceOf(TaskScope.Unset.class, service.current().scope());
+    }
+
+    @Test
+    void scopeValidatedBeforeAWorkspaceRoundTripIsNotApplied() throws IOException {
+        selectWorkspace(ws);
+        var basis = service.basis();
+        var stale = TaskScope.validatePaths(basis.root(), List.of("src"), null);
+        selectWorkspace(Files.createDirectory(temp.resolve("other")));
+        selectWorkspace(ws);
+
+        assertThrows(IllegalStateException.class, () -> service.applyIfCurrent(basis, stale));
+
+        assertInstanceOf(TaskScope.Unset.class, service.current().scope());
+    }
+
+    @Test
+    void scopeValidatedBeforeClearAndReselectingTheSameWorkspaceIsNotApplied() throws IOException {
+        selectWorkspace(ws);
+        var basis = service.basis();
+        var stale = TaskScope.validatePaths(basis.root(), List.of("src"), null);
+        service.clear();
+        selectWorkspace(ws);
+
+        assertThrows(IllegalStateException.class, () -> service.applyIfCurrent(basis, stale));
+
+        assertInstanceOf(TaskScope.Unset.class, service.current().scope());
+    }
+
+    @Test
+    void reselectingTheSameWorkspaceDoesNotInvalidateAValidationInFlight() throws IOException {
+        selectWorkspace(ws);
+        var basis = service.basis();
+        var result = TaskScope.validatePaths(basis.root(), List.of("src"), null);
+        selectWorkspace(ws);
+
+        assertInstanceOf(TaskScopeValidation.Accepted.class, service.applyIfCurrent(basis, result));
+        assertInstanceOf(TaskScope.Paths.class, service.current().scope());
     }
 
     @Test

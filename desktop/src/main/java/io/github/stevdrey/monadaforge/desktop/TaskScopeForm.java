@@ -127,7 +127,7 @@ final class TaskScopeForm {
         if (!value.equals(items.get(index))) {
             items.set(index, value);
             errors.removeIf(violation -> violation.field() == field && violation.index() == index);
-            dropContradictions();
+            dropDerivedErrors(field);
             invalidate();
         }
     }
@@ -157,6 +157,9 @@ final class TaskScopeForm {
         if (!keep) {
             clear();
             return;
+        }
+        if (!hasContent()) {
+            return; // nothing was entered, so there is nothing to re-validate
         }
         errors.clear();
         invalidate();
@@ -239,13 +242,18 @@ final class TaskScopeForm {
 
     private void restructured(Field field) {
         errors.removeIf(violation -> violation.field() == field);
-        dropContradictions();
+        dropDerivedErrors(field);
         invalidate();
     }
 
-    /** A contradiction between the lists is reported on one of them but caused by either, so any edit clears it. */
-    private void dropContradictions() {
-        errors.removeIf(violation -> violation.reason() == TaskScopeValidation.Reason.ALLOWED_AND_EXCLUDED_CONTRADICT);
+    /**
+     * Some errors depend on other entries: a contradiction is reported on one list but caused by
+     * either, and a duplicate sits on the later entry while the earlier one is edited. An edit
+     * therefore clears contradictions everywhere and duplicates in the edited list.
+     */
+    private void dropDerivedErrors(Field changed) {
+        errors.removeIf(violation -> violation.reason() == TaskScopeValidation.Reason.ALLOWED_AND_EXCLUDED_CONTRADICT
+                || (violation.field() == changed && violation.reason() == TaskScopeValidation.Reason.DUPLICATE));
     }
 
     private void invalidate() {

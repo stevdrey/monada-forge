@@ -20,7 +20,12 @@ import java.util.Objects;
  */
 public final class TaskDraftService {
 
+    /** The workspace a scope is validated against, and the epoch of the draft it was read from. */
+    record Basis(WorkspaceRoot root, long epoch) {}
+
     private volatile TaskDraft draft = TaskDraft.empty();
+    // Bumped whenever the workspace is replaced or the draft is cleared, so A, B, A cannot look unchanged.
+    private long epoch;
 
     /** The current draft; an immutable snapshot unaffected by later changes. */
     public TaskDraft current() {
@@ -38,7 +43,7 @@ public final class TaskDraftService {
     public synchronized WorkspaceRootValidation selectWorkspace(Path candidate) throws IOException {
         WorkspaceRootValidation result = WorkspaceRoot.validate(Objects.requireNonNull(candidate, "candidate"));
         if (result instanceof WorkspaceRootValidation.Accepted accepted) {
-            draft = draft.withWorkspace(accepted.root());
+            replaceWorkspace(accepted.root());
         }
         return result;
     }
@@ -50,7 +55,7 @@ public final class TaskDraftService {
      * directory, so nothing unchecked can be applied.
      */
     public synchronized void selectWorkspace(WorkspaceRoot root) {
-        draft = draft.withWorkspace(Objects.requireNonNull(root, "root"));
+        replaceWorkspace(Objects.requireNonNull(root, "root"));
     }
 
     /** Validates {@code input} and, if accepted, replaces the specification. */
@@ -75,8 +80,8 @@ public final class TaskDraftService {
      * @throws IOException on unexpected I/O failures, as opposed to invalid or escaping input
      */
     public TaskScopeValidation selectEntireWorkspace(List<String> excluded) throws IOException {
-        WorkspaceRoot root = requireWorkspace();
-        return applyIfCurrent(root, TaskScope.validateEntireWorkspace(root, excluded));
+        Basis basis = basis();
+        return applyIfCurrent(basis, TaskScope.validateEntireWorkspace(basis.root(), excluded));
     }
 
     /**
@@ -87,8 +92,8 @@ public final class TaskDraftService {
      * @throws IOException on unexpected I/O failures, as opposed to invalid or escaping input
      */
     public TaskScopeValidation selectPaths(List<String> allowed, List<String> excluded) throws IOException {
-        WorkspaceRoot root = requireWorkspace();
-        return applyIfCurrent(root, TaskScope.validatePaths(root, allowed, excluded));
+        Basis basis = basis();
+        return applyIfCurrent(basis, TaskScope.validatePaths(basis.root(), allowed, excluded));
     }
 
     /** Drops the scope back to {@linkplain TaskScope#unset() unset}, keeping workspace and specification; a no-op when unset. */
@@ -98,17 +103,27 @@ public final class TaskDraftService {
 
     /** Discards the whole draft, returning to the empty, incomplete state. */
     public synchronized void clear() {
+        epoch++;
         draft = TaskDraft.empty();
     }
 
-    private WorkspaceRoot requireWorkspace() {
-        return draft.workspace()
-                .orElseThrow(() -> new IllegalStateException("A workspace must be selected before a scope"));
+    private void replaceWorkspace(WorkspaceRoot root) {
+        if (!root.equals(draft.workspace().orElse(null))) {
+            epoch++;
+        }
+        draft = draft.withWorkspace(root);
     }
 
-    /** Applies {@code result}, validated against {@code root}, only while {@code root} is still selected. */
-    synchronized TaskScopeValidation applyIfCurrent(WorkspaceRoot root, TaskScopeValidation result) {
-        if (!root.equals(draft.workspace().orElse(null))) {
+    /** The workspace and epoch a scope validation starts from. */
+    synchronized Basis basis() {
+        WorkspaceRoot root = draft.workspace()
+                .orElseThrow(() -> new IllegalStateException("A workspace must be selected before a scope"));
+        return new Basis(root, epoch);
+    }
+
+    /** Applies {@code result}, validated against {@code basis}, only while that exact draft state still holds. */
+    synchronized TaskScopeValidation applyIfCurrent(Basis basis, TaskScopeValidation result) {
+        if (basis.epoch() != epoch || !basis.root().equals(draft.workspace().orElse(null))) {
             throw new IllegalStateException("The workspace changed during validation");
         }
         if (result instanceof TaskScopeValidation.Accepted accepted) {
