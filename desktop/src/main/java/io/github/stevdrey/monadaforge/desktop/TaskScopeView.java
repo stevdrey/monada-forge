@@ -184,9 +184,12 @@ final class TaskScopeView extends VBox {
     }
 
     private void finish(long id, TaskScopeForm.Request request, TaskScopeValidation validation) {
-        if (id == requestId) {
-            pending = false;
+        if (id != requestId) {
+            // Superseded by a newer request or a workspace change: completing it could withdraw the
+            // scope the newer request just accepted.
+            return;
         }
+        pending = false;
         form.complete(request, validation);
         allowed.refreshErrors();
         excluded.refreshErrors();
