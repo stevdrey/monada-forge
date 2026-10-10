@@ -36,8 +36,10 @@ final class TaskScopeView extends VBox {
     private final ItemListEditor excluded;
     private final Label outcome = new Label();
     private final Button validate = new Button("Validate scope");
+    private final Button review = new Button("Review task");
     private Runnable onChangeWorkspace = () -> {};
     private Runnable onBack = () -> {};
+    private Runnable onContinue = () -> {};
     private BiConsumer<StatusKind, String> onStatus = (kind, text) -> {};
 
     TaskScopeView(TaskScopeForm form, Executor background, Executor ui) {
@@ -83,11 +85,12 @@ final class TaskScopeView extends VBox {
         outcome.setWrapText(true);
         validate.getStyleClass().add("primary-button");
         validate.setOnAction(event -> validation.start());
+        review.setOnAction(event -> onContinue.run());
         var back = new Button("Back to task");
         back.setOnAction(event -> onBack.run());
         var change = new Button("Change workspace");
         change.setOnAction(event -> onChangeWorkspace.run());
-        var actions = new HBox(validate, back, change);
+        var actions = new HBox(validate, review, back, change);
         actions.getStyleClass().add("action-row");
 
         getChildren().addAll(heading, workspace, intro, mode, allowed, excluded, outcome, actions);
@@ -131,6 +134,10 @@ final class TaskScopeView extends VBox {
         onBack = Objects.requireNonNull(handler, "handler");
     }
 
+    void setOnContinue(Runnable handler) {
+        onContinue = Objects.requireNonNull(handler, "handler");
+    }
+
     void setOnStatus(BiConsumer<StatusKind, String> handler) {
         onStatus = Objects.requireNonNull(handler, "handler");
     }
@@ -172,6 +179,8 @@ final class TaskScopeView extends VBox {
         allowed.refreshErrors();
         excluded.refreshErrors();
         validate.setDisable(validation.pending());
+        // Only a scope core accepted and the user has not edited since may go on to review.
+        review.setDisable(validation.pending() || !(form.result() instanceof TaskScopeForm.Result.Valid));
         var status = TaskScopeMessages.status(form.result(), form.needsRevalidation());
         outcome.setText(validation.pending() ? "Checking the scope…" : status.text() + ".");
         publishStatus();

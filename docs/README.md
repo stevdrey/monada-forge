@@ -9,6 +9,6 @@ All documentation is canonical in this repository and reviewed through PRs. `wik
 | Decisions | [Desktop modular monolith](adr/0001-desktop-modular-monolith.md), [toolchain](adr/0002-java-27-javafx-27-gradle.md) |
 | Security | [Invariants](security/security-invariants.md), [threat model](security/threat-model.md) |
 | Development | [Local setup](development/local-development.md), [Spec Context](development/spec-context-template.md) |
-| Verification | [Initial scaffold](verification/initial-scaffold.md) |
+| Verification | [Initial scaffold](verification/initial-scaffold.md), [Phase 1 task intake](verification/phase-1-task-intake.md) |
 
 Accepted ADRs govern durable decisions. Product roadmap entries are proposals, not implemented capabilities.

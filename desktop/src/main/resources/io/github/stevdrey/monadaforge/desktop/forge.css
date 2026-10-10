@@ -180,3 +180,21 @@
 .scope-mode .radio-button { -fx-text-fill: -forge-text; }
 .scope-warning { -fx-text-fill: -forge-warning-text; -fx-padding: 0 0 0 24px; }
 .path-row { -fx-spacing: 10px; -fx-alignment: center-left; }
+
+/* Task review */
+.review-form { -fx-spacing: 16px; }
+.review-details { -fx-spacing: 14px; }
+.review-section { -fx-spacing: 4px; }
+.review-heading { -fx-font-weight: bold; }
+.review-list { -fx-spacing: 2px; }
+.review-notice {
+    -fx-background-color: -forge-panel;
+    -fx-border-color: -forge-border;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-text-fill: -forge-text;
+    -fx-padding: 10px 12px;
+}
+.review-blockers { -fx-spacing: 4px; }
+.review-blocker { -fx-text-fill: -forge-error-text; }
+.review-ready { -fx-text-fill: -forge-success-text; }

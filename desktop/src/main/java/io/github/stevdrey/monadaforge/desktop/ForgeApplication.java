@@ -37,6 +37,12 @@ public final class ForgeApplication extends Application {
                 drafts::clearScope);
         var scopeView = new TaskScopeView(scopeForm, validation, Platform::runLater);
         scopeView.setOnStatus(shell.status()::show);
+        // The review shows core's draft; the forms only say whether they still match it.
+        var reviewView = new TaskReviewView(() -> TaskReviewModel.of(
+                drafts.current(),
+                form.result() instanceof TaskIntakeForm.Result.Valid,
+                scopeForm.result() instanceof TaskScopeForm.Result.Valid));
+        reviewView.setOnStatus(shell.status()::show);
         Runnable changeWorkspace = () -> {
             selectionView.offerKeepingTask(intakeView.hasContent() || scopeView.hasContent());
             shell.setContent(selectionView);
@@ -44,9 +50,28 @@ public final class ForgeApplication extends Application {
         };
         intakeView.setOnChangeWorkspace(changeWorkspace);
         scopeView.setOnChangeWorkspace(changeWorkspace);
+        reviewView.setOnChangeWorkspace(changeWorkspace);
         intakeView.setOnContinue(() -> {
             shell.setContent(scopeView);
             scopeView.publishStatus();
+        });
+        scopeView.setOnContinue(() -> {
+            reviewView.refresh();
+            shell.setContent(reviewView);
+            reviewView.publishStatus();
+        });
+        reviewView.setOnEditTask(() -> {
+            shell.setContent(intakeView);
+            intakeView.publishStatus();
+        });
+        reviewView.setOnEditScope(() -> {
+            shell.setContent(scopeView);
+            scopeView.publishStatus();
+        });
+        // Confirmation only records the review in memory; nothing is started or touched.
+        reviewView.setOnConfirm(() -> {
+            drafts.confirm();
+            reviewView.refresh();
         });
         scopeView.setOnBack(() -> {
             shell.setContent(intakeView);
