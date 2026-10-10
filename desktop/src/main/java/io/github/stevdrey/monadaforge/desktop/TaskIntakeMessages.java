@@ -9,9 +9,6 @@ import java.util.stream.Collectors;
 
 /** Actionable, user-facing text for task intake; it never echoes what the user typed. */
 final class TaskIntakeMessages {
-    /** What the status region should show. */
-    record Status(StatusKind kind, String text) {}
-
     private TaskIntakeMessages() {}
 
     static String describe(Violation violation) {
@@ -39,12 +36,12 @@ final class TaskIntakeMessages {
                 : violations.stream().map(TaskIntakeMessages::describe).collect(Collectors.joining(" "));
     }
 
-    static Status status(TaskIntakeForm.Result result) {
+    static StatusMessage status(TaskIntakeForm.Result result) {
         return switch (Objects.requireNonNull(result, "result")) {
             case TaskIntakeForm.Result.NotValidated _ ->
-                    new Status(StatusKind.INFO, "Describe the task, then validate it");
-            case TaskIntakeForm.Result.Valid _ -> new Status(StatusKind.SUCCESS, "Task specification is valid");
-            case TaskIntakeForm.Result.Invalid invalid -> new Status(
+                    new StatusMessage(StatusKind.INFO, "Describe the task, then validate it");
+            case TaskIntakeForm.Result.Valid _ -> new StatusMessage(StatusKind.SUCCESS, "Task specification is valid");
+            case TaskIntakeForm.Result.Invalid invalid -> new StatusMessage(
                     StatusKind.ERROR,
                     invalid.violations().size() == 1
                             ? "Fix 1 problem in the task specification"

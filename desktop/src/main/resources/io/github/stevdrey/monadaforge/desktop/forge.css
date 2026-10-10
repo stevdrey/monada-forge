@@ -173,3 +173,10 @@
     -fx-background-color: -forge-error-text, -forge-panel;
     -fx-border-color: transparent;
 }
+
+/* Scope editor */
+.scope-form { -fx-spacing: 16px; }
+.scope-mode { -fx-spacing: 8px; }
+.scope-mode .radio-button { -fx-text-fill: -forge-text; }
+.scope-warning { -fx-text-fill: -forge-warning-text; -fx-padding: 0 0 0 24px; }
+.path-row { -fx-spacing: 10px; -fx-alignment: center-left; }

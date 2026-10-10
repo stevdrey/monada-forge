@@ -29,10 +29,28 @@ public final class ForgeApplication extends Application {
         var form = new TaskIntakeForm(drafts::updateSpecification, drafts::clearSpecification);
         var intakeView = new TaskIntakeView(form);
         intakeView.setOnStatus(shell.status()::show);
-        intakeView.setOnChangeWorkspace(() -> {
-            selectionView.offerKeepingTask(intakeView.hasContent());
+        // Scope is checked by core against the selected workspace; the form only holds typed paths.
+        var scopeForm = new TaskScopeForm(
+                (mode, allowed, excluded, stillWanted) -> mode == TaskScopeForm.Mode.ENTIRE_WORKSPACE
+                        ? drafts.selectEntireWorkspace(excluded, stillWanted)
+                        : drafts.selectPaths(allowed, excluded, stillWanted),
+                drafts::clearScope);
+        var scopeView = new TaskScopeView(scopeForm, validation, Platform::runLater);
+        scopeView.setOnStatus(shell.status()::show);
+        Runnable changeWorkspace = () -> {
+            selectionView.offerKeepingTask(intakeView.hasContent() || scopeView.hasContent());
             shell.setContent(selectionView);
             selectionView.publishStatus();
+        };
+        intakeView.setOnChangeWorkspace(changeWorkspace);
+        scopeView.setOnChangeWorkspace(changeWorkspace);
+        intakeView.setOnContinue(() -> {
+            shell.setContent(scopeView);
+            scopeView.publishStatus();
+        });
+        scopeView.setOnBack(() -> {
+            shell.setContent(intakeView);
+            intakeView.publishStatus();
         });
 
         // Applies the draft and the view only for the latest confirmed workspace; see WorkspaceRegistration.
@@ -40,12 +58,20 @@ public final class ForgeApplication extends Application {
                 WorkspaceRoot::validate, validation, Platform::runLater, new WorkspaceRegistration.Outcome() {
                     @Override
                     public void accepted(WorkspaceRoot fresh, boolean discardTask) {
+                        var previous = drafts.current().workspace();
                         if (discardTask) {
                             intakeView.reset();
+                            scopeView.reset();
                             drafts.clear();
                         }
                         drafts.selectWorkspace(fresh);
+                        // Core unsets a scope bound to another root; the form must not keep trusting it.
+                        if (!discardTask && previous.isPresent() && !previous.get().equals(fresh)) {
+                            scopeForm.workspaceChanged(true);
+                            scopeView.syncFromForm();
+                        }
                         intakeView.setWorkspace(fresh.path());
+                        scopeView.setWorkspace(fresh.path());
                         shell.setContent(intakeView);
                         intakeView.publishStatus();
                     }

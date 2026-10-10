@@ -161,6 +161,94 @@ class TaskDraftServiceTest {
     }
 
     @Test
+    void clearingTheScopeKeepsWorkspaceAndSpecificationAndIsIdempotent() throws IOException {
+        completeDraft();
+        TaskDraft before = service.current();
+
+        service.clearScope();
+        service.clearScope();
+
+        TaskDraft after = service.current();
+        assertInstanceOf(TaskScope.Unset.class, after.scope());
+        assertEquals(before.workspace(), after.workspace());
+        assertEquals(before.specification(), after.specification());
+        assertEquals(List.of(Missing.SCOPE), after.missing());
+    }
+
+    @Test
+    void scopeValidatedAgainstAReplacedWorkspaceIsNotApplied() throws IOException {
+        selectWorkspace(ws);
+        var basis = service.basis();
+        var stale = TaskScope.validatePaths(basis.root(), List.of("src"), null);
+        selectWorkspace(Files.createDirectory(temp.resolve("other")));
+
+        assertThrows(TaskDraftService.StaleScopeException.class, () -> service.applyIfCurrent(basis, stale));
+
+        assertInstanceOf(TaskScope.Unset.class, service.current().scope());
+    }
+
+    @Test
+    void scopeValidatedBeforeAWorkspaceRoundTripIsNotApplied() throws IOException {
+        selectWorkspace(ws);
+        var basis = service.basis();
+        var stale = TaskScope.validatePaths(basis.root(), List.of("src"), null);
+        selectWorkspace(Files.createDirectory(temp.resolve("other")));
+        selectWorkspace(ws);
+
+        assertThrows(TaskDraftService.StaleScopeException.class, () -> service.applyIfCurrent(basis, stale));
+
+        assertInstanceOf(TaskScope.Unset.class, service.current().scope());
+    }
+
+    @Test
+    void scopeValidatedBeforeClearAndReselectingTheSameWorkspaceIsNotApplied() throws IOException {
+        selectWorkspace(ws);
+        var basis = service.basis();
+        var stale = TaskScope.validatePaths(basis.root(), List.of("src"), null);
+        service.clear();
+        selectWorkspace(ws);
+
+        assertThrows(TaskDraftService.StaleScopeException.class, () -> service.applyIfCurrent(basis, stale));
+
+        assertInstanceOf(TaskScope.Unset.class, service.current().scope());
+    }
+
+    @Test
+    void reselectingTheSameWorkspaceDoesNotInvalidateAValidationInFlight() throws IOException {
+        selectWorkspace(ws);
+        var basis = service.basis();
+        var result = TaskScope.validatePaths(basis.root(), List.of("src"), null);
+        selectWorkspace(ws);
+
+        assertInstanceOf(TaskScopeValidation.Accepted.class, service.applyIfCurrent(basis, result));
+        assertInstanceOf(TaskScope.Paths.class, service.current().scope());
+    }
+
+    @Test
+    void unwantedScopeIsNeverAppliedAndReportedAsStale() throws IOException {
+        selectWorkspace(ws);
+
+        assertThrows(
+                TaskDraftService.StaleScopeException.class, () -> service.selectPaths(List.of("src"), null, () -> false));
+        assertThrows(
+                TaskDraftService.StaleScopeException.class, () -> service.selectEntireWorkspace(null, () -> false));
+
+        assertInstanceOf(TaskScope.Unset.class, service.current().scope());
+        service.selectPaths(List.of("src"), null, () -> true);
+        assertInstanceOf(TaskScope.Paths.class, service.current().scope());
+    }
+
+    @Test
+    void clearingAnUnsetScopeLeavesTheDraftInstanceUntouched() throws IOException {
+        selectWorkspace(ws);
+        TaskDraft before = service.current();
+
+        service.clearScope();
+
+        assertSame(before, service.current());
+    }
+
+    @Test
     void applyingAValidatedRootBehavesLikeSelectingItsPath() throws IOException {
         completeDraft();
         TaskDraft before = service.current();

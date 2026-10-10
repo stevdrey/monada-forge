@@ -41,6 +41,14 @@ class StylesheetTest {
     }
 
     @Test
+    void definesScopeEditorClasses() throws IOException {
+        var css = stylesheet();
+        for (var styleClass : new String[] {".scope-form", ".scope-mode", ".scope-warning", ".path-row"}) {
+            assertTrue(css.contains(styleClass), "missing " + styleClass);
+        }
+    }
+
+    @Test
     void declaresPaletteOnShellInsteadOfSceneRoot() throws IOException {
         var css = stylesheet();
         assertTrue(css.contains("-forge-surface:"), "palette missing");

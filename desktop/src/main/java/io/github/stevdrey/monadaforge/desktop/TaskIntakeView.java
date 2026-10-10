@@ -32,6 +32,7 @@ final class TaskIntakeView extends VBox {
     private final ItemListEditor nonGoals;
     private final Label outcome = new Label();
     private Runnable onChangeWorkspace = () -> {};
+    private Runnable onContinue = () -> {};
     private BiConsumer<StatusKind, String> onStatus = (kind, text) -> {};
 
     TaskIntakeView(TaskIntakeForm form) {
@@ -67,21 +68,21 @@ final class TaskIntakeView extends VBox {
         descriptionError.getStyleClass().add("field-error");
         descriptionError.setWrapText(true);
 
-        criteria = new ItemListEditor(
+        criteria = ItemListEditor.forTask(
                 Field.ACCEPTANCE_CRITERIA,
                 "Acceptance criteria (required)",
                 "Each item is one distinct, checkable outcome. Order is kept.",
                 "criterion",
                 form,
                 this::refresh);
-        constraints = new ItemListEditor(
+        constraints = ItemListEditor.forTask(
                 Field.CONSTRAINTS,
                 "Constraints (optional)",
                 "Rules the solution must respect.",
                 "constraint",
                 form,
                 this::refresh);
-        nonGoals = new ItemListEditor(
+        nonGoals = ItemListEditor.forTask(
                 Field.NON_GOALS,
                 "Non-goals (optional)",
                 "Work that is explicitly out of scope.",
@@ -99,7 +100,9 @@ final class TaskIntakeView extends VBox {
         });
         var change = new Button("Change workspace");
         change.setOnAction(event -> onChangeWorkspace.run());
-        var actions = new HBox(validate, change);
+        var next = new Button("Continue to scope");
+        next.setOnAction(event -> onContinue.run());
+        var actions = new HBox(validate, next, change);
         actions.getStyleClass().add("action-row");
 
         getChildren().addAll(
@@ -137,6 +140,10 @@ final class TaskIntakeView extends VBox {
 
     void setOnChangeWorkspace(Runnable handler) {
         onChangeWorkspace = Objects.requireNonNull(handler, "handler");
+    }
+
+    void setOnContinue(Runnable handler) {
+        onContinue = Objects.requireNonNull(handler, "handler");
     }
 
     void setOnStatus(BiConsumer<StatusKind, String> handler) {
