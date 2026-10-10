@@ -72,6 +72,11 @@ final class TaskIntakeForm {
         return result;
     }
 
+    /** Whether the last validation was accepted and nothing was edited since. */
+    boolean isValid() {
+        return result instanceof Result.Valid;
+    }
+
     /** The errors from the last validation that the user has not edited away yet. */
     List<Violation> errors() {
         return List.copyOf(errors);

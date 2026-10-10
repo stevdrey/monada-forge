@@ -12,9 +12,12 @@ import java.util.Optional;
  * <p>A draft combines a validated {@link WorkspaceRoot}, a validated {@link TaskSpecification} and
  * a validated {@link TaskScope}. It is {@link Status#REVIEWABLE} only when all three were supplied
  * explicitly; nothing is inferred, so an {@linkplain TaskScope#unset() unset} scope is reported as
- * missing rather than read as the whole workspace. Task text stays untrusted data and the draft
- * grants no authority beyond the validated scope. Instances come only from {@link
- * TaskDraftService}.
+ * missing rather than read as the whole workspace. A reviewable draft becomes {@link Status#READY}
+ * once it is explicitly confirmed; any later change to a component withdraws that confirmation,
+ * while re-applying equal data keeps it.
+ * Confirmation only records that the draft was reviewed: it is not an authorization to act. Task
+ * text stays untrusted data and the draft grants no authority beyond the validated scope. Instances
+ * come only from {@link TaskDraftService}.
  */
 public final class TaskDraft {
 
@@ -22,8 +25,13 @@ public final class TaskDraft {
     public enum Status {
         /** At least one component is still {@linkplain #missing() missing}. */
         INCOMPLETE,
-        /** Workspace, specification and scope were all supplied and validated. */
-        REVIEWABLE
+        /** Workspace, specification and scope were all supplied and validated, but not yet confirmed. */
+        REVIEWABLE,
+        /**
+         * A reviewable draft that was explicitly confirmed and has not changed since. It is ready for a
+         * future phase; this grants no permission to read, change or run anything.
+         */
+        READY
     }
 
     /** A component that has not been supplied yet. */
@@ -33,16 +41,18 @@ public final class TaskDraft {
         SCOPE
     }
 
-    private static final TaskDraft EMPTY = new TaskDraft(null, null, TaskScope.unset());
+    private static final TaskDraft EMPTY = new TaskDraft(null, null, TaskScope.unset(), false);
 
     private final WorkspaceRoot workspace;
     private final TaskSpecification specification;
     private final TaskScope scope;
+    private final boolean confirmed;
 
-    private TaskDraft(WorkspaceRoot workspace, TaskSpecification specification, TaskScope scope) {
+    private TaskDraft(WorkspaceRoot workspace, TaskSpecification specification, TaskScope scope, boolean confirmed) {
         this.workspace = workspace;
         this.specification = specification;
         this.scope = scope;
+        this.confirmed = confirmed;
     }
 
     static TaskDraft empty() {
@@ -52,20 +62,35 @@ public final class TaskDraft {
     TaskDraft withWorkspace(WorkspaceRoot newWorkspace) {
         Objects.requireNonNull(newWorkspace, "workspace");
         // A scope is bound to the root it was validated against, so it never survives a different root.
-        TaskScope keptScope = newWorkspace.equals(workspace) ? scope : TaskScope.unset();
-        return new TaskDraft(newWorkspace, specification, keptScope);
+        if (newWorkspace.equals(workspace)) {
+            return this;
+        }
+        return new TaskDraft(newWorkspace, specification, TaskScope.unset(), false);
     }
 
     TaskDraft withSpecification(TaskSpecification newSpecification) {
-        return new TaskDraft(workspace, Objects.requireNonNull(newSpecification, "specification"), scope);
+        Objects.requireNonNull(newSpecification, "specification");
+        // Re-applying equal data changes nothing, so a confirmation of that exact content stays valid.
+        return newSpecification.equals(specification)
+                ? this
+                : new TaskDraft(workspace, newSpecification, scope, false);
     }
 
     TaskDraft withoutSpecification() {
-        return new TaskDraft(workspace, null, scope);
+        return new TaskDraft(workspace, null, scope, false);
     }
 
     TaskDraft withScope(TaskScope newScope) {
-        return new TaskDraft(workspace, specification, Objects.requireNonNull(newScope, "scope"));
+        Objects.requireNonNull(newScope, "scope");
+        return newScope.equals(scope) ? this : new TaskDraft(workspace, specification, newScope, false);
+    }
+
+    /** A copy marked as confirmed; only a draft with nothing {@linkplain #missing() missing} can be. */
+    TaskDraft confirmed() {
+        if (!missing().isEmpty()) {
+            throw new IllegalStateException("An incomplete draft cannot be confirmed");
+        }
+        return confirmed ? this : new TaskDraft(workspace, specification, scope, true);
     }
 
     public Optional<WorkspaceRoot> workspace() {
@@ -97,7 +122,10 @@ public final class TaskDraft {
     }
 
     public Status status() {
-        return missing().isEmpty() ? Status.REVIEWABLE : Status.INCOMPLETE;
+        if (!missing().isEmpty()) {
+            return Status.INCOMPLETE;
+        }
+        return confirmed ? Status.READY : Status.REVIEWABLE;
     }
 
     @Override
@@ -105,12 +133,13 @@ public final class TaskDraft {
         return other instanceof TaskDraft that
                 && Objects.equals(workspace, that.workspace)
                 && Objects.equals(specification, that.specification)
-                && scope.equals(that.scope);
+                && scope.equals(that.scope)
+                && confirmed == that.confirmed;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(workspace, specification, scope);
+        return Objects.hash(workspace, specification, scope, confirmed);
     }
 
     /** A structural summary only: task text never reaches logs or diagnostics. */

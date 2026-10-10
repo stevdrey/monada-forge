@@ -98,6 +98,11 @@ final class TaskScopeForm {
         return result;
     }
 
+    /** Whether the last validation was accepted and nothing was edited since. */
+    boolean isValid() {
+        return result instanceof Result.Valid;
+    }
+
     /** Whether entries were kept across a workspace change and still await re-validation. */
     boolean needsRevalidation() {
         return workspaceChanged && result instanceof Result.NotValidated;

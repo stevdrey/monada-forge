@@ -367,4 +367,141 @@ class TaskDraftServiceTest {
         assertFalse(text.contains("Secret description"));
         assertFalse(text.contains("Title"));
     }
+
+    @Test
+    void confirmingACompleteDraftMakesItReady() throws IOException {
+        completeDraft();
+
+        assertEquals(TaskDraftService.Confirmation.CONFIRMED, service.confirm());
+
+        assertEquals(Status.READY, service.current().status());
+        assertTrue(service.current().missing().isEmpty());
+    }
+
+    @Test
+    void confirmingTwiceIsIdempotent() throws IOException {
+        completeDraft();
+        service.confirm();
+        TaskDraft confirmed = service.current();
+
+        assertEquals(TaskDraftService.Confirmation.CONFIRMED, service.confirm());
+
+        assertSame(confirmed, service.current());
+    }
+
+    @Test
+    void confirmingAnIncompleteDraftIsRejectedAndChangesNothing() throws IOException {
+        TaskDraft empty = service.current();
+        assertEquals(TaskDraftService.Confirmation.INCOMPLETE, service.confirm());
+        assertSame(empty, service.current());
+
+        selectWorkspace(ws);
+        service.updateSpecification(spec("Title"));
+        TaskDraft withoutScope = service.current();
+        assertEquals(TaskDraftService.Confirmation.INCOMPLETE, service.confirm());
+        assertSame(withoutScope, service.current());
+        assertEquals(Status.INCOMPLETE, service.current().status());
+    }
+
+    @Test
+    void reapplyingEqualDataKeepsConfirmation() throws IOException {
+        completeDraft();
+        service.confirm();
+        TaskDraft confirmed = service.current();
+
+        service.updateSpecification(spec("Title"));
+        assertSame(confirmed, service.current());
+
+        service.selectPaths(List.of("src"), null);
+        assertSame(confirmed, service.current());
+
+        selectWorkspace(ws);
+        assertSame(confirmed, service.current());
+        assertEquals(Status.READY, service.current().status());
+    }
+
+    @Test
+    void changingTheSpecificationWithdrawsConfirmation() throws IOException {
+        completeDraft();
+        service.confirm();
+
+        service.updateSpecification(spec("Other"));
+
+        assertEquals(Status.REVIEWABLE, service.current().status());
+    }
+
+    @Test
+    void changingTheScopeWithdrawsConfirmation() throws IOException {
+        completeDraft();
+        service.confirm();
+        service.selectEntireWorkspace(List.of("docs"));
+        assertEquals(Status.REVIEWABLE, service.current().status());
+
+        service.confirm();
+        service.selectPaths(List.of("src"), null);
+        assertEquals(Status.REVIEWABLE, service.current().status());
+    }
+
+    @Test
+    void rejectedInputKeepsConfirmation() throws IOException {
+        completeDraft();
+        service.confirm();
+        TaskDraft confirmed = service.current();
+
+        service.updateSpecification(new TaskSpecificationDraft("", "", List.of(), List.of(), List.of()));
+        service.selectPaths(List.of("missing"), null);
+
+        assertSame(confirmed, service.current());
+        assertEquals(Status.READY, service.current().status());
+    }
+
+    @Test
+    void changingTheWorkspaceWithdrawsConfirmationAndScope() throws IOException {
+        completeDraft();
+        service.confirm();
+        Path other = Files.createDirectory(temp.resolve("other"));
+
+        selectWorkspace(other);
+
+        assertEquals(Status.INCOMPLETE, service.current().status());
+        assertEquals(List.of(Missing.SCOPE), service.current().missing());
+    }
+
+    @Test
+    void clearingWithdrawsConfirmation() throws IOException {
+        completeDraft();
+        service.confirm();
+        service.clearScope();
+        assertEquals(Status.INCOMPLETE, service.current().status());
+
+        completeDraft();
+        service.confirm();
+        service.clearSpecification();
+        assertEquals(Status.INCOMPLETE, service.current().status());
+
+        completeDraft();
+        service.confirm();
+        service.clear();
+        assertEquals(Status.INCOMPLETE, service.current().status());
+        assertEquals(TaskDraftService.Confirmation.INCOMPLETE, service.confirm());
+    }
+
+    @Test
+    void confirmationTouchesNoFilesAndLeaksNoTaskText() throws IOException {
+        completeDraft();
+        List<Path> before = listTree();
+
+        service.confirm();
+
+        assertEquals(before, listTree());
+        assertFalse(service.current().toString().contains("Secret"));
+        assertFalse(service.current().toString().contains("Title"));
+        assertTrue(service.current().toString().contains("READY"));
+    }
+
+    private List<Path> listTree() throws IOException {
+        try (var paths = Files.walk(temp)) {
+            return paths.sorted().toList();
+        }
+    }
 }

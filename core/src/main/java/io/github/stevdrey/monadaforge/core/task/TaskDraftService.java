@@ -18,8 +18,18 @@ import java.util.function.BooleanSupplier;
  * snapshot is immutable and always consistent. Scope validation touches the file system, so it runs
  * outside that serialization against the workspace snapshot and is applied afterwards only if that
  * workspace is still the selected one; a stalled file system therefore never blocks other changes.
+ * Confirming a complete draft is likewise a pure in-memory transition: it records that the draft
+ * was reviewed, withdraws itself on any later change, and authorizes nothing.
  */
 public final class TaskDraftService {
+
+    /** The outcome of {@link #confirm()}. */
+    public enum Confirmation {
+        /** The draft is now {@link TaskDraft.Status#READY}. */
+        CONFIRMED,
+        /** Something is still missing; the draft was left untouched. */
+        INCOMPLETE
+    }
 
     /**
      * A scope validation can no longer be applied: the workspace was replaced or the draft cleared
@@ -138,6 +148,19 @@ public final class TaskDraftService {
             return;
         }
         draft = draft.withScope(TaskScope.unset());
+    }
+
+    /**
+     * Marks a complete draft as reviewed and ready for a later phase. This changes in-memory state
+     * only: no file, process or network is touched and no authority is granted. Confirming an
+     * already confirmed draft is a no-op; an incomplete draft is left untouched.
+     */
+    public synchronized Confirmation confirm() {
+        if (!draft.missing().isEmpty()) {
+            return Confirmation.INCOMPLETE;
+        }
+        draft = draft.confirmed();
+        return Confirmation.CONFIRMED;
     }
 
     /** Discards the whole draft, returning to the empty, incomplete state. */
