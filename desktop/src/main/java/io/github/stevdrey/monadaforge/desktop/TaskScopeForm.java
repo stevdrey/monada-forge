@@ -1,5 +1,6 @@
 package io.github.stevdrey.monadaforge.desktop;
 
+import io.github.stevdrey.monadaforge.core.task.TaskDraftService;
 import io.github.stevdrey.monadaforge.core.task.TaskScope;
 import io.github.stevdrey.monadaforge.core.task.TaskScopeValidation;
 import io.github.stevdrey.monadaforge.core.task.TaskScopeValidation.Field;
@@ -77,8 +78,8 @@ final class TaskScopeForm {
     private volatile long version; // read by the guard of a validation running off the UI thread
 
     /**
-     * @param onInvalidated run when an accepted result stops matching the form, so whoever stored the
-     *     accepted scope can drop it
+     * @param onInvalidated run on every change to the form and whenever validation does not accept the
+     *     input, so whoever stored an accepted scope can drop it; it must be idempotent and cheap
      */
     TaskScopeForm(Validator validator, Runnable onInvalidated) {
         this.validator = Objects.requireNonNull(validator, "validator");
@@ -200,6 +201,8 @@ final class TaskScopeForm {
         try {
             return validator.validate(
                     request.mode(), request.allowed(), request.excluded(), () -> isCurrent(request));
+        } catch (TaskDraftService.StaleScopeException e) {
+            return null; // expected when the form or workspace changed meanwhile; complete() drops it
         } catch (IOException | RuntimeException e) {
             LOG.log(System.Logger.Level.WARNING, "Scope validation failed unexpectedly", e);
             return null;
@@ -208,15 +211,13 @@ final class TaskScopeForm {
 
     /**
      * Applies the outcome of {@link #validate} if the form is still as it was when {@code request}
-     * was taken; otherwise the outcome is dropped, and an accepted scope is withdrawn from the draft.
-     * Returns the resulting {@link #result()}.
+     * was taken; otherwise the outcome is dropped. An obsolete request is never applied to the draft
+     * (the guard passed to the validator refuses it), and the edit that made it obsolete already
+     * withdrew the scope, so nothing is cleared here: a newer accepted scope must survive. Returns
+     * the resulting {@link #result()}.
      */
     Result complete(Request request, TaskScopeValidation outcome) {
-        boolean current = isCurrent(request);
-        if (!current) {
-            if (outcome instanceof TaskScopeValidation.Accepted) {
-                onInvalidated.run();
-            }
+        if (!isCurrent(request)) {
             return result;
         }
         errors.clear();

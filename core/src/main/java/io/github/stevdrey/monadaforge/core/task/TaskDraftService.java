@@ -21,6 +21,18 @@ import java.util.function.BooleanSupplier;
  */
 public final class TaskDraftService {
 
+    /**
+     * A scope validation can no longer be applied: the workspace was replaced or the draft cleared
+     * while it ran, or the caller dropped the request. The draft is left untouched.
+     */
+    public static final class StaleScopeException extends IllegalStateException {
+        private static final long serialVersionUID = 1L;
+
+        StaleScopeException(String message) {
+            super(message);
+        }
+    }
+
     /** The workspace a scope is validated against, and the epoch of the draft it was read from. */
     record Basis(WorkspaceRoot root, long epoch) {}
 
@@ -77,7 +89,8 @@ public final class TaskDraftService {
      * Validates an explicit whole-workspace scope against the selected workspace and, if accepted,
      * replaces the scope.
      *
-     * @throws IllegalStateException if no workspace has been selected, or it changed while validating
+     * @throws IllegalStateException if no workspace has been selected
+     * @throws StaleScopeException if the workspace changed while validating
      * @throws IOException on unexpected I/O failures, as opposed to invalid or escaping input
      */
     public TaskScopeValidation selectEntireWorkspace(List<String> excluded) throws IOException {
@@ -85,10 +98,12 @@ public final class TaskDraftService {
     }
 
     /**
-     * Like {@link #selectEntireWorkspace(List)}, but the result is applied only if {@code
-     * stillWanted} is true at the moment of applying (checked under the draft's lock). When it is
-     * false the draft is left untouched and the validation result is returned unapplied, so a caller
-     * that has dropped the request cannot have it reinstate a scope.
+     * Like {@link #selectEntireWorkspace(List)}, but {@code stillWanted} is checked at the moment of
+     * applying, under the draft's lock. When it is false the draft is left untouched and {@link
+     * StaleScopeException} is thrown, so a caller that has dropped the request can neither have it
+     * reinstate a scope nor mistake an unapplied result for an applied one.
+     *
+     * @throws StaleScopeException if the workspace changed while validating or {@code stillWanted} is false
      */
     public TaskScopeValidation selectEntireWorkspace(List<String> excluded, BooleanSupplier stillWanted)
             throws IOException {
@@ -101,7 +116,8 @@ public final class TaskDraftService {
      * Validates a scope limited to {@code allowed} areas against the selected workspace and, if
      * accepted, replaces the scope.
      *
-     * @throws IllegalStateException if no workspace has been selected, or it changed while validating
+     * @throws IllegalStateException if no workspace has been selected
+     * @throws StaleScopeException if the workspace changed while validating
      * @throws IOException on unexpected I/O failures, as opposed to invalid or escaping input
      */
     public TaskScopeValidation selectPaths(List<String> allowed, List<String> excluded) throws IOException {
@@ -118,6 +134,9 @@ public final class TaskDraftService {
 
     /** Drops the scope back to {@linkplain TaskScope#unset() unset}, keeping workspace and specification; a no-op when unset. */
     public synchronized void clearScope() {
+        if (draft.scope() instanceof TaskScope.Unset) {
+            return;
+        }
         draft = draft.withScope(TaskScope.unset());
     }
 
@@ -149,9 +168,12 @@ public final class TaskDraftService {
     synchronized TaskScopeValidation applyIfCurrent(
             Basis basis, TaskScopeValidation result, BooleanSupplier stillWanted) {
         if (basis.epoch() != epoch || !basis.root().equals(draft.workspace().orElse(null))) {
-            throw new IllegalStateException("The workspace changed during validation");
+            throw new StaleScopeException("The workspace changed during validation");
         }
-        if (result instanceof TaskScopeValidation.Accepted accepted && stillWanted.getAsBoolean()) {
+        if (!stillWanted.getAsBoolean()) {
+            throw new StaleScopeException("The validation request was dropped");
+        }
+        if (result instanceof TaskScopeValidation.Accepted accepted) {
             draft = draft.withScope(accepted.scope());
         }
         return result;

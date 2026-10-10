@@ -51,21 +51,21 @@ final class TaskScopeMessages {
                 : violations.stream().map(TaskScopeMessages::describe).collect(Collectors.joining(" "));
     }
 
-    static TaskIntakeMessages.Status status(TaskScopeForm.Result result, boolean needsRevalidation) {
+    static StatusMessage status(TaskScopeForm.Result result, boolean needsRevalidation) {
         return switch (Objects.requireNonNull(result, "result")) {
             case TaskScopeForm.Result.NotValidated _ -> needsRevalidation
-                    ? new TaskIntakeMessages.Status(StatusKind.WARNING, WORKSPACE_CHANGED)
-                    : new TaskIntakeMessages.Status(StatusKind.INFO, "Define the task scope, then validate it");
+                    ? new StatusMessage(StatusKind.WARNING, WORKSPACE_CHANGED)
+                    : new StatusMessage(StatusKind.INFO, "Define the task scope, then validate it");
             case TaskScopeForm.Result.ModeRequired _ ->
-                    new TaskIntakeMessages.Status(StatusKind.ERROR, MODE_REQUIRED);
-            case TaskScopeForm.Result.Valid _ -> new TaskIntakeMessages.Status(StatusKind.SUCCESS, "Scope is valid");
-            case TaskScopeForm.Result.Invalid invalid -> new TaskIntakeMessages.Status(
+                    new StatusMessage(StatusKind.ERROR, MODE_REQUIRED);
+            case TaskScopeForm.Result.Valid _ -> new StatusMessage(StatusKind.SUCCESS, "Scope is valid");
+            case TaskScopeForm.Result.Invalid invalid -> new StatusMessage(
                     StatusKind.ERROR,
                     invalid.violations().size() == 1
                             ? "Fix 1 problem in the scope"
                             : "Fix " + invalid.violations().size() + " problems in the scope");
             case TaskScopeForm.Result.Failed _ ->
-                    new TaskIntakeMessages.Status(StatusKind.ERROR, "The scope could not be checked. Try again");
+                    new StatusMessage(StatusKind.ERROR, "The scope could not be checked. Try again");
         };
     }
 

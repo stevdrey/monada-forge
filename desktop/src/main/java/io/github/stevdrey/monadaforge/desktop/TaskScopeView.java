@@ -1,11 +1,9 @@
 package io.github.stevdrey.monadaforge.desktop;
 
-import io.github.stevdrey.monadaforge.core.task.TaskScopeValidation;
 import io.github.stevdrey.monadaforge.core.task.TaskScopeValidation.Field;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.Executor;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.function.BiConsumer;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -26,30 +24,25 @@ import javafx.scene.layout.VBox;
 final class TaskScopeView extends VBox {
     private static final String ENTIRE_WORKSPACE_WARNING = "The whole workspace is in scope except the excluded "
             + "paths. Choose this only if the task really needs it.";
-    private static final System.Logger LOG = System.getLogger(TaskScopeView.class.getName());
 
     private final TaskScopeForm form;
-    private final Executor background;
-    private final Executor ui;
+    private final ScopeValidation validation;
     private final Label workspace = new Label();
     private final RadioButton specific = new RadioButton("Only the allowed paths");
     private final RadioButton entire = new RadioButton("The entire workspace");
     private final ToggleGroup modes = new ToggleGroup();
     private final Label warning = new Label();
-    private final PathListEditor allowed;
-    private final PathListEditor excluded;
+    private final ItemListEditor allowed;
+    private final ItemListEditor excluded;
     private final Label outcome = new Label();
     private final Button validate = new Button("Validate scope");
     private Runnable onChangeWorkspace = () -> {};
     private Runnable onBack = () -> {};
     private BiConsumer<StatusKind, String> onStatus = (kind, text) -> {};
-    private boolean pending;
-    private long requestId;
 
     TaskScopeView(TaskScopeForm form, Executor background, Executor ui) {
         this.form = Objects.requireNonNull(form, "form");
-        this.background = Objects.requireNonNull(background, "background");
-        this.ui = Objects.requireNonNull(ui, "ui");
+        this.validation = new ScopeValidation(form, background, ui, this::refresh);
         getStyleClass().addAll("view", "task-form", "scope-form");
 
         var heading = new Label("Define the task scope");
@@ -70,7 +63,7 @@ final class TaskScopeView extends VBox {
         var mode = new VBox(label("Scope (required)"), specific, entire, warning);
         mode.getStyleClass().add("scope-mode");
 
-        allowed = new PathListEditor(
+        allowed = ItemListEditor.forPaths(
                 Field.ALLOWED,
                 "Allowed paths",
                 "Files or directories that exist in the workspace. At least one is required unless the "
@@ -78,7 +71,7 @@ final class TaskScopeView extends VBox {
                 "allowed path",
                 form,
                 this::edited);
-        excluded = new PathListEditor(
+        excluded = ItemListEditor.forPaths(
                 Field.EXCLUDED,
                 "Excluded paths (optional)",
                 "Parts inside the scope that stay off limits. Exclusions always win.",
@@ -89,7 +82,7 @@ final class TaskScopeView extends VBox {
         outcome.getStyleClass().add("view-body");
         outcome.setWrapText(true);
         validate.getStyleClass().add("primary-button");
-        validate.setOnAction(event -> submit());
+        validate.setOnAction(event -> validation.start());
         var back = new Button("Back to task");
         back.setOnAction(event -> onBack.run());
         var change = new Button("Change workspace");
@@ -110,8 +103,7 @@ final class TaskScopeView extends VBox {
     /** Shows the form after it was changed from outside, e.g. by a workspace change. */
     void syncFromForm() {
         // A validation still running belongs to the previous state; its outcome is ignored.
-        pending = false;
-        requestId++;
+        validation.supersede();
         modes.selectToggle(
                 switch (form.mode()) {
                     case NOT_CHOSEN -> null;
@@ -168,40 +160,7 @@ final class TaskScopeView extends VBox {
 
     /** Any input change supersedes a validation still running, so the user can submit the new input at once. */
     private void edited() {
-        if (pending) {
-            pending = false;
-            requestId++;
-        }
-        refresh();
-    }
-
-    private void submit() {
-        var request = form.request();
-        long id = ++requestId;
-        pending = true;
-        refresh();
-        try {
-            background.execute(() -> {
-                var validation = form.validate(request);
-                ui.execute(() -> finish(id, request, validation));
-            });
-        } catch (RejectedExecutionException e) {
-            // E.g. the executor was shut down: never leave the view waiting for a result.
-            LOG.log(System.Logger.Level.WARNING, "Scope validation was rejected", e);
-            finish(id, request, null);
-        }
-    }
-
-    private void finish(long id, TaskScopeForm.Request request, TaskScopeValidation validation) {
-        if (id != requestId) {
-            // Superseded by a newer request or a workspace change: completing it could withdraw the
-            // scope the newer request just accepted.
-            return;
-        }
-        pending = false;
-        form.complete(request, validation);
-        allowed.refreshErrors();
-        excluded.refreshErrors();
+        validation.supersede();
         refresh();
     }
 
@@ -212,9 +171,9 @@ final class TaskScopeView extends VBox {
         allowed.setManaged(!wholeWorkspace);
         allowed.refreshErrors();
         excluded.refreshErrors();
-        validate.setDisable(pending);
+        validate.setDisable(validation.pending());
         var status = TaskScopeMessages.status(form.result(), form.needsRevalidation());
-        outcome.setText(pending ? "Checking the scope…" : status.text() + ".");
+        outcome.setText(validation.pending() ? "Checking the scope…" : status.text() + ".");
         publishStatus();
     }
 }

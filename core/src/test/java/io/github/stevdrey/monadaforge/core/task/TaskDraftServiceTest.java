@@ -182,7 +182,7 @@ class TaskDraftServiceTest {
         var stale = TaskScope.validatePaths(basis.root(), List.of("src"), null);
         selectWorkspace(Files.createDirectory(temp.resolve("other")));
 
-        assertThrows(IllegalStateException.class, () -> service.applyIfCurrent(basis, stale));
+        assertThrows(TaskDraftService.StaleScopeException.class, () -> service.applyIfCurrent(basis, stale));
 
         assertInstanceOf(TaskScope.Unset.class, service.current().scope());
     }
@@ -195,7 +195,7 @@ class TaskDraftServiceTest {
         selectWorkspace(Files.createDirectory(temp.resolve("other")));
         selectWorkspace(ws);
 
-        assertThrows(IllegalStateException.class, () -> service.applyIfCurrent(basis, stale));
+        assertThrows(TaskDraftService.StaleScopeException.class, () -> service.applyIfCurrent(basis, stale));
 
         assertInstanceOf(TaskScope.Unset.class, service.current().scope());
     }
@@ -208,7 +208,7 @@ class TaskDraftServiceTest {
         service.clear();
         selectWorkspace(ws);
 
-        assertThrows(IllegalStateException.class, () -> service.applyIfCurrent(basis, stale));
+        assertThrows(TaskDraftService.StaleScopeException.class, () -> service.applyIfCurrent(basis, stale));
 
         assertInstanceOf(TaskScope.Unset.class, service.current().scope());
     }
@@ -225,17 +225,27 @@ class TaskDraftServiceTest {
     }
 
     @Test
-    void unwantedScopeIsReturnedButNeverApplied() throws IOException {
+    void unwantedScopeIsNeverAppliedAndReportedAsStale() throws IOException {
         selectWorkspace(ws);
 
-        var unwanted = service.selectPaths(List.of("src"), null, () -> false);
-        var unwantedWhole = service.selectEntireWorkspace(null, () -> false);
+        assertThrows(
+                TaskDraftService.StaleScopeException.class, () -> service.selectPaths(List.of("src"), null, () -> false));
+        assertThrows(
+                TaskDraftService.StaleScopeException.class, () -> service.selectEntireWorkspace(null, () -> false));
 
-        assertInstanceOf(TaskScopeValidation.Accepted.class, unwanted);
-        assertInstanceOf(TaskScopeValidation.Accepted.class, unwantedWhole);
         assertInstanceOf(TaskScope.Unset.class, service.current().scope());
         service.selectPaths(List.of("src"), null, () -> true);
         assertInstanceOf(TaskScope.Paths.class, service.current().scope());
+    }
+
+    @Test
+    void clearingAnUnsetScopeLeavesTheDraftInstanceUntouched() throws IOException {
+        selectWorkspace(ws);
+        TaskDraft before = service.current();
+
+        service.clearScope();
+
+        assertSame(before, service.current());
     }
 
     @Test

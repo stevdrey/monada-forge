@@ -3,7 +3,9 @@ package io.github.stevdrey.monadaforge.desktop;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import io.github.stevdrey.monadaforge.core.task.TaskDraftService;
 import io.github.stevdrey.monadaforge.core.task.TaskScope;
@@ -115,7 +117,7 @@ class TaskScopeFormTest {
         try {
             Files.createSymbolicLink(ws.resolve("link"), temp.resolve("outside"));
         } catch (UnsupportedOperationException | IOException e) {
-            return; // symbolic links are not available on this file system
+            assumeTrue(false, "symbolic links not supported here");
         }
         allow("link");
 
@@ -176,7 +178,7 @@ class TaskScopeFormTest {
     }
 
     @Test
-    void staleOutcomeIsDroppedAndItsAcceptedScopeWithdrawn() {
+    void staleOutcomeIsDroppedAndNeverApplied() {
         allow("src");
         var request = form.request();
         var outcome = form.validate(request);
@@ -319,7 +321,7 @@ class TaskScopeFormTest {
         assertFalse(form.isCurrent(request));
         var outcome = form.validate(request);
 
-        assertInstanceOf(TaskScopeValidation.Accepted.class, outcome);
+        assertNull(outcome); // the service refused the obsolete request instead of applying it
         assertInstanceOf(TaskScope.Unset.class, service.current().scope());
     }
 
@@ -332,5 +334,31 @@ class TaskScopeFormTest {
         counting.addItem(Field.ALLOWED);
 
         assertEquals(2, withdrawals[0]);
+    }
+
+    @Test
+    void completingAnObsoleteRequestLeavesANewerAcceptedScopeAlone() {
+        allow("src");
+        var old = form.request();
+        var oldOutcome = form.validate(old);
+        form.setItem(Field.ALLOWED, 0, "docs");
+        assertInstanceOf(TaskScopeForm.Result.Valid.class, form.submit());
+        var accepted = service.current().scope();
+
+        var result = form.complete(old, oldOutcome);
+
+        assertInstanceOf(TaskScopeForm.Result.Valid.class, result);
+        assertEquals(accepted, service.current().scope());
+    }
+
+    @Test
+    void staleRequestFromTheServiceIsDroppedQuietly() {
+        var stale = new TaskScopeForm(
+                (mode, allowed, excluded, stillWanted) -> service.selectEntireWorkspace(excluded, () -> false),
+                () -> {});
+        stale.setMode(TaskScopeForm.Mode.ENTIRE_WORKSPACE);
+
+        assertNull(stale.validate(stale.request()));
+        assertInstanceOf(TaskScope.Unset.class, service.current().scope());
     }
 }
